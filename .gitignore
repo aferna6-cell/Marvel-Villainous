@@ -1,0 +1,12 @@
+node_modules/
+dist/
+dist-electron/
+out/
+
+# Proprietary content — placeholders only live in the repo.
+# Users add their own scanned card art here; never committed.
+assets/cards/**/*.png
+
+# Logs and editor cruft
+*.log
+.DS_Store
