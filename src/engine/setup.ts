@@ -85,8 +85,11 @@ function makeSeatedPlayer(
 }
 
 export function newGame(opts: NewGameOpts): GameState {
-  if (opts.villains.length < 2 || opts.villains.length > 4) {
-    throw new Error(`newGame: expected 2-4 villains, got ${opts.villains.length}`);
+  // The full game is 2-4 players, but CHUNK 5 (M2) ships a 1-player solo
+  // experience for Thanos and the engine reducer handles solo loops cleanly,
+  // so the lower bound is 1.
+  if (opts.villains.length < 1 || opts.villains.length > 4) {
+    throw new Error(`newGame: expected 1-4 villains, got ${opts.villains.length}`);
   }
 
   // Register every card def for every villain in the game.
