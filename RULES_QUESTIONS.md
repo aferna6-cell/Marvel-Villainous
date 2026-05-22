@@ -96,3 +96,54 @@ symbol and they activate it." Does dispatching `fateOpponent` require a
 matching Fate icon spent at the current location, or may a player Fate freely?
 **Current code:** `fateOpponent` is independently legal during the Actions or
 Fate phase; no icon prerequisite. Related to Q2.
+
+## Open questions (raised in CHUNK 5 — Thanos)
+
+These are blocking questions: the chunk explicitly directs the assistant to
+stop a thread of work and ask if any per-Thanos data is unknown. The relevant
+engine files keep their CHUNK 4 generic stubs until each question is answered.
+
+### Q12 — Thanos's realm: per-location icons
+
+For each of Thanos's four locations on the printed board, what is:
+1. The location's printed name (for the user's own reference; the repo keeps
+   `name: ''`).
+2. The exact set and order of **top-row** action icons.
+3. The exact set and order of **bottom-row** action icons (the ones covered
+   when a hero arrives).
+
+**Current code:** `engine/villains/thanos/realm.ts` ships a generic
+placeholder of `top: [gainPower, play]`, `bottom: [move, fate]` per location.
+Replace once the user provides the printed board.
+
+### Q13 — Thanos's starting numbers
+
+What are the rulebook-printed values for Thanos's:
+1. Starting Power.
+2. Starting hand size (the draw-up-to limit at end of turn).
+3. Starting deck size (how many cards are in the deck after dealing the
+   starting hand — implied by deck composition).
+4. Any per-villain mover rule exceptions (e.g. may stay at current location).
+
+**Current code:** starting Power = 0; `PlayerState.handSize` is `undefined`
+so the engine uses the global default of 4. Deck stub has 8 cards.
+
+### Q14 — Thanos's villain deck composition
+
+What are the mechanical metadata for every card in Thanos's deck (one row per
+card)? For each card the engine needs:
+- `type` (`ally` / `item` / `effect` / `condition`)
+- `cost` (Power cost to play)
+- `strength` (for allies; integer)
+- `effects[]` (mapped to the §2.3 `EffectSpec` primitives — gainPower,
+  drawCards, discardSelf, moveAlly, boostStrength, defeatHero, moveHero,
+  lookAtFate, searchDeck, forceDiscard, placeToken, or `villainSpecific`
+  with a key the assistant adds to `villains/thanos/specific.ts`)
+- `tags[]` (e.g. `'blackOrder'` — anything other cards filter on)
+- `icons[]` (for heroes only — which icons the hero covers; per Q3 this is
+  currently treated as the whole bottom row)
+
+**Current code:** `engine/villains/thanos/deck.ts` ships 8 generic stub
+entries (`thanos-stub-ally-N`, etc.) with placeholder `cost` and `strength`.
+A full per-card transcription pass replaces them all — see
+`assets/CONTENT_TODO.md` for the worksheet.

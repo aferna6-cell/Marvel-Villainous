@@ -13,15 +13,7 @@ import { shuffle } from './rng';
 import { clearRegistry, registerCards } from './cards/registry';
 import { autoAdvance } from './state';
 import { villains as villainData } from './villains/index';
-import type {
-  CardDef,
-  GameState,
-  Location,
-  PlayerId,
-  PlayerState,
-  Realm,
-  VillainKey,
-} from './types';
+import type { CardDef, GameState, PlayerId, PlayerState, VillainKey } from './types';
 
 const SEATS: readonly PlayerId[] = ['p1', 'p2', 'p3', 'p4'];
 
@@ -33,32 +25,6 @@ export interface NewGameOpts {
   villains: VillainKey[];
   /** Seed for the shuffled decks and all in-game randomness. */
   seed: number;
-}
-
-function makeStubLocation(idx: number): Location {
-  return {
-    id: `loc-${idx}`,
-    name: `Location ${idx}`, // user fills per-realm names from the rulebook
-    topIcons: ['gainPower', 'play'],
-    bottomIcons: ['move', 'fate'],
-    heroesPresent: [],
-    alliesPresent: [],
-    itemsPresent: [],
-    conditions: [],
-  };
-}
-
-function makeStubRealm(villain: VillainKey): Realm {
-  return {
-    villain,
-    locations: [
-      makeStubLocation(0),
-      makeStubLocation(1),
-      makeStubLocation(2),
-      makeStubLocation(3),
-    ],
-    villainTokenAt: 0,
-  };
 }
 
 function makeEmptySeat(id: PlayerId): PlayerState {
@@ -73,7 +39,7 @@ function makeEmptySeat(id: PlayerId): PlayerState {
     discard: [],
     fateDeck: [],
     fateDiscard: [],
-    realm: makeStubRealm('thanos'),
+    realm: villainData.thanos.makeRealm(),
     flags: {},
     objectiveProgress: { completed: false, steps: {} },
     mustMoveDifferent: true,
@@ -109,7 +75,7 @@ function makeSeatedPlayer(
       discard: [],
       fateDeck: fateResult.items,
       fateDiscard: [],
-      realm: makeStubRealm(villain),
+      realm: data.makeRealm(),
       flags: {},
       objectiveProgress: { completed: false, steps: {} },
       mustMoveDifferent: true,

@@ -58,16 +58,30 @@ left blank for the user to fill in from their own physical copy.
 | Empty Fate deck reshuffles the Fate discard      | `engine/actions/fate.ts` — `applyFate`   |            |      |
 | A pending prompt halts the auto-advance loop     | `engine/state.ts` — `autoAdvance`         |            |      |
 
+## Thanos (CHUNK 5 — M2)
+
+| Rule / data                                     | Code location                                | Rulebook § | Page |
+| ------------------------------------------------ | --------------------------------------------- | ---------- | ---- |
+| Thanos's 4 locations exist on the realm          | `villains/thanos/realm.ts` — `thanosRealm`    |            |      |
+| Per-location icon set on Thanos's board          | _PLACEHOLDER — pending Q12 in RULES_QUESTIONS_ |          |      |
+| Thanos's starting Power                          | _PLACEHOLDER (0) — pending Q13_               |            |      |
+| Thanos's starting hand size                      | _PLACEHOLDER (default 4) — pending Q13_       |            |      |
+| Thanos's starting deck composition (per card)    | _PLACEHOLDER (8 stub cards) — pending Q14_    |            |      |
+| Per-villain realm factory wired to setup         | `villains/index.ts` — `villains[v].makeRealm` |            |      |
+| Thanos-only New Game from the menu                | `app/routes.tsx` — `VillainPicker`            |            |      |
+
 ## Not yet enforced (pending later milestones)
 
 | Rule                                            | Reason / target milestone               |
 | ------------------------------------------------ | ----------------------------------------- |
-| Per-villain starting power / deck composition    | needs card data — M4+                     |
-| Per-villain hand-size exceptions                 | needs rulebook — see RULES_QUESTIONS.md    |
-| Exact icon → action coupling                     | needs rulebook — see RULES_QUESTIONS.md    |
-| Power gained per `gainPower` icon                | PLACEHOLDER = 1 — see RULES_QUESTIONS.md   |
-| Turn-scoped strength-boost expiry                | needs rulebook — see RULES_QUESTIONS.md    |
-| Vanquish via summed ally strength                | needs rulebook — see RULES_QUESTIONS.md    |
+| Per-villain hand-size exceptions                 | needs rulebook — see RULES_QUESTIONS Q13   |
+| Exact icon → action coupling                     | needs rulebook — see RULES_QUESTIONS Q2    |
+| Power gained per `gainPower` icon                | PLACEHOLDER = 1 — see RULES_QUESTIONS Q1   |
+| Turn-scoped strength-boost expiry                | needs rulebook — see RULES_QUESTIONS Q7    |
+| Vanquish via summed ally strength                | needs rulebook — see RULES_QUESTIONS Q6    |
+| Thanos's printed realm icons                     | needs rulebook — see RULES_QUESTIONS Q12   |
+| Thanos's starting numbers                        | needs rulebook — see RULES_QUESTIONS Q13   |
+| Thanos's full deck composition                   | needs rulebook — see RULES_QUESTIONS Q14   |
 
 Notes:
 
