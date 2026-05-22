@@ -171,6 +171,12 @@ export interface PlayerState {
 
 export type Phase = 'start' | 'move' | 'actions' | 'fate' | 'end';
 
+/** An action icon already spent by the active player this turn. */
+export interface UsedIcon {
+  location: LocationIndex;
+  iconIndex: number;
+}
+
 export interface GameState {
   seed: number;
   rngCursor: number;
@@ -182,6 +188,50 @@ export interface GameState {
   log: LogEntry[];
   winner: PlayerId | null;
   pendingPrompt: Prompt | null; // for cards that need a choice
+  /**
+   * Event-bus queue for triggered abilities. Filled by actions/effects and
+   * drained (FIFO) at the end of every action before the reducer returns.
+   */
+  pendingTriggers: TriggerSpec[];
+  /** Action icons the active player has already spent this turn. */
+  usedIcons: UsedIcon[];
+  /** Monotonic counter for minting deterministic InstanceIds. */
+  instanceCounter: number;
+}
+
+// --- Triggered-ability event bus -------------------------------------------
+
+export type TriggerEvent =
+  | 'turnStart'
+  | 'turnEnd'
+  | 'villainMoved'
+  | 'cardPlayed'
+  | 'powerGained'
+  | 'heroDefeated'
+  | 'allyDefeated';
+
+/**
+ * A queued triggered-ability event. `player` identifies whose realm the event
+ * concerns; `payload` carries event-specific data for handlers (CHUNK 4+).
+ */
+export interface TriggerSpec {
+  event: TriggerEvent;
+  player: PlayerId;
+  payload: Record<string, unknown>;
+}
+
+// --- Effect resolution context ---------------------------------------------
+
+/** Context threaded into `applyEffect` so an effect knows who/what it serves. */
+export interface EffectContext {
+  /** The player resolving the effect. */
+  player: PlayerId;
+  /** The card-definition id the effect originated from, if any. */
+  sourceCardId?: CardId;
+  /** The in-play instance the effect originated from, if any. */
+  sourceInstanceId?: InstanceId;
+  /** The location the effect is anchored to, if any. */
+  location?: LocationIndex;
 }
 
 // --- Actions (§2.2) --------------------------------------------------------

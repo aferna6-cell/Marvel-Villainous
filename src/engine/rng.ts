@@ -35,3 +35,29 @@ export function rngInt(seed: number, cursor: number, maxExclusive: number): RngI
   const r = rng(seed, cursor);
   return { value: Math.floor(r.value * maxExclusive), nextCursor: r.nextCursor };
 }
+
+export interface ShuffleResult<T> {
+  /** A new shuffled array — the input is not mutated. */
+  items: T[];
+  nextCursor: number;
+}
+
+/** Fisher-Yates shuffle driven by the seeded RNG. Pure: input is untouched. */
+export function shuffle<T>(
+  items: readonly T[],
+  seed: number,
+  cursor: number,
+): ShuffleResult<T> {
+  const result = items.slice();
+  let c = cursor;
+  for (let i = result.length - 1; i > 0; i--) {
+    const r = rng(seed, c);
+    c = r.nextCursor;
+    const j = Math.floor(r.value * (i + 1));
+    const a = result[i] as T;
+    const b = result[j] as T;
+    result[i] = b;
+    result[j] = a;
+  }
+  return { items: result, nextCursor: c };
+}

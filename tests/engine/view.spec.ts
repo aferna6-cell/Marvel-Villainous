@@ -63,6 +63,9 @@ function makeState(): GameState {
     log: [{ turn: 1, player: 'p1', message: 'game started' }],
     winner: null,
     pendingPrompt: null,
+    pendingTriggers: [],
+    usedIcons: [],
+    instanceCounter: 0,
   };
 }
 

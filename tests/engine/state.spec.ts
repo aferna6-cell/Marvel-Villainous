@@ -41,6 +41,9 @@ function makeState(): GameState {
     log: [],
     winner: null,
     pendingPrompt: null,
+    pendingTriggers: [],
+    usedIcons: [],
+    instanceCounter: 0,
   };
 }
 
@@ -50,10 +53,27 @@ describe('createGameEngine()', () => {
     expect(engine.getState().turn).toBe(1);
   });
 
-  it('throws "not implemented" for every action kind (reducer fills in CHUNK 3)', () => {
+  it('applies a legal action and advances state', () => {
     const engine = createGameEngine(makeState());
-    expect(() => engine.dispatch({ kind: 'startTurn' })).toThrow('not implemented');
-    expect(() => engine.dispatch({ kind: 'endTurn' })).toThrow('not implemented');
-    expect(() => engine.dispatch({ kind: 'moveVillain', to: 1 })).toThrow('not implemented');
+    engine.dispatch({ kind: 'startTurn' });
+    expect(engine.getState().phase).toBe('move');
+  });
+
+  it('throws on an illegal action rather than mutating state', () => {
+    const engine = createGameEngine(makeState());
+    // endTurn is illegal from the start phase.
+    expect(() => engine.dispatch({ kind: 'endTurn' })).toThrow('illegal action');
+    expect(engine.getState().phase).toBe('start');
+  });
+
+  it('notifies subscribers after a successful dispatch', () => {
+    const engine = createGameEngine(makeState());
+    let calls = 0;
+    const unsubscribe = engine.subscribe(() => {
+      calls += 1;
+    });
+    engine.dispatch({ kind: 'startTurn' });
+    unsubscribe();
+    expect(calls).toBe(1);
   });
 });

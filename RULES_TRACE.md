@@ -6,24 +6,55 @@ Each entry should cite the rulebook section/page it came from so a reviewer can
 verify the code matches the book. The **Rulebook §** and **Page** columns are
 left blank for the user to fill in from their own physical copy.
 
-## Numeric defaults & structural rules
+## Structural rules & numeric defaults
 
-| Rule                                    | Value / shape                          | Code location                                 | Rulebook § | Page |
-| --------------------------------------- | -------------------------------------- | ---------------------------------------------- | ---------- | ---- |
-| Locations per realm                     | exactly 4                              | `engine/types.ts` — `Realm.locations` 4-tuple  |            |      |
-| Villain token occupies one location     | index 0–3                              | `engine/types.ts` — `Realm.villainTokenAt`     |            |      |
-| Game phase order                        | start → move → actions → fate → end    | `engine/types.ts` — `Phase`                    |            |      |
-| Players per game                        | 2–4                                    | `engine/types.ts` — `PlayerId`, `playerOrder`  |            |      |
-| Default hand size (draw-up target)      | 4 (villain-dependent)                  | _pending — enforced in `phases/endOfTurn` (M2+)_ |          |      |
-| Fate action: reveal / play / discard    | reveal 2, play 1, discard 1            | _pending — `phases/fatePhase` (M3+)_           |            |      |
-| Villain must move to a *different* location | mandatory move                      | _pending — `actions/move` (M2+)_               |            |      |
-| Per-villain starting power / deck size  | villain-specific (not uniform)         | _pending — `villains/<name>/deck.ts` (M4+)_    |            |      |
+| Rule                                          | Value / shape                       | Code location                                  | Rulebook § | Page |
+| ---------------------------------------------- | ------------------------------------ | ----------------------------------------------- | ---------- | ---- |
+| Locations per realm                            | exactly 4                            | `engine/types.ts` — `Realm.locations` 4-tuple   |            |      |
+| Villain token occupies one location            | index 0–3                            | `engine/types.ts` — `Realm.villainTokenAt`      |            |      |
+| Game phase order                               | start → move → actions → fate → end  | `engine/types.ts` — `Phase`                     |            |      |
+| Players per game                                | 2–4                                  | `engine/types.ts` — `PlayerId`, `playerOrder`   |            |      |
+| Default end-of-turn hand size                   | 4 (villain exceptions pending)       | `engine/util.ts` — `DEFAULT_HAND_SIZE`          |            |      |
+| Fate action: reveal / play / discard            | reveal 2, play 1, discard 1          | `engine/actions/fate.ts` — `FATE_REVEAL_COUNT`  |            |      |
+
+## Legality rules enforced by `engine/validate.ts` (CHUNK 3)
+
+| Rule                                            | Code location                          | Rulebook § | Page |
+| ------------------------------------------------ | ---------------------------------------- | ---------- | ---- |
+| Villain must move to a *different* location      | `validate.ts` — `moveVillain` case       |            |      |
+| Icons may only be used at the villain's location | `validate.ts` — `useIcon` case           |            |      |
+| Bottom-row icons covered by a hero are unusable  | `validate.ts` — `useIcon` case           |            |      |
+| Each icon may be used once per turn              | `validate.ts` — `useIcon` case           |            |      |
+| Cannot play a card you cannot pay for            | `validate.ts` — `playCard` case          |            |      |
+| An ally may only attack a hero at its location   | `validate.ts` — `attackHero` case        |            |      |
+| Cannot Fate yourself                             | `validate.ts` — `fateOpponent` case      |            |      |
+| Drawing respects the hand-size limit             | `validate.ts` — `drawToHandSize` case    |            |      |
+| Can only discard cards held in hand              | `validate.ts` — `discardCards` case      |            |      |
+| A pending prompt blocks all other actions        | `validate.ts` — top of `isLegal`         |            |      |
+| No actions once the game has a winner            | `validate.ts` — top of `isLegal`         |            |      |
+
+## Engine mechanics
+
+| Rule                                            | Code location                          | Rulebook § | Page |
+| ------------------------------------------------ | ---------------------------------------- | ---------- | ---- |
+| Empty draw pile reshuffles the discard pile      | `engine/cards/effects.ts` — `reshuffleDeck` |          |      |
+| Empty Fate deck reshuffles the Fate discard      | `engine/actions/fate.ts` — `applyFate`   |            |      |
+| Turn passes in `playerOrder`; turn++ on wrap     | `engine/actions/endTurn.ts` — `applyEndTurn` |        |      |
+
+## Not yet enforced (pending later milestones)
+
+| Rule                                            | Reason / target milestone               |
+| ------------------------------------------------ | ----------------------------------------- |
+| Per-villain starting power / deck composition    | needs card data — M4+                     |
+| Per-villain hand-size exceptions                 | needs rulebook — see RULES_QUESTIONS.md    |
+| Exact icon → action coupling                     | needs rulebook — see RULES_QUESTIONS.md    |
+| Power gained per `gainPower` icon                | PLACEHOLDER = 1 — see RULES_QUESTIONS.md   |
+| Turn-scoped strength-boost expiry                | needs rulebook — see RULES_QUESTIONS.md    |
+| Vanquish via summed ally strength                | needs rulebook — see RULES_QUESTIONS.md    |
 
 Notes:
 
-- Values above are mechanical defaults asserted by the plan
-  (`marvel-villainous-plan.md` §0.1, §2.1, §3). Rows marked _pending_ are typed
-  but not yet enforced by logic; they will gain code-location citations as the
-  corresponding milestones land.
-- No rule has been *implemented in logic* yet (CHUNK 2 lays down types only).
-  This table records the structural commitments the type system already makes.
+- The values in the first table are mechanical commitments asserted by the plan
+  (`marvel-villainous-plan.md` §0.1, §2.1, §3, §4).
+- Anything implemented with a placeholder is marked `PLACEHOLDER` in the code
+  and listed in RULES_QUESTIONS.md; it must be confirmed against the rulebook.
