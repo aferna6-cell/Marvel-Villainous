@@ -59,6 +59,7 @@ export function makePlayer(
     realm: makeRealm(villain),
     flags: {},
     objectiveProgress: { completed: false, steps: {} },
+    mustMoveDifferent: true,
     ...overrides,
   };
 }

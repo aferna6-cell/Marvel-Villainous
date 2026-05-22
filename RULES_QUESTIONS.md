@@ -66,4 +66,33 @@ What are each villain's starting hand size, starting Power, and starting deck
 composition? The plan (§5, §11) states these are villain-specific and not
 uniform.
 **Current code:** only the generic default hand size (4) exists; per-villain
-values are unencoded and will be filled in M4+.
+values are unencoded and will be filled in M4+. `PlayerState.handSize` is
+the override slot — per-villain values plug in there.
+
+## Open questions (raised in CHUNK 4)
+
+### Q9 — Fate card placement location
+
+When a Fate hero or condition is played onto the fated player's realm, which
+of the 4 locations does it land on? Is the location fixed on the card, chosen
+by the active player, chosen by the fated player, or determined by some other
+rule?
+**Current code:** placed at location 0 by default (`cards/effects.ts` —
+`resolveFatePlay`).
+
+### Q10 — Can the player return to the Actions phase after Fate?
+
+The plan §3 lists phases in order `start → move → actions → fate → end`, which
+suggests entering Fate exits Actions. Confirm whether using a Fate icon /
+Fating an opponent forfeits any remaining Actions for the turn.
+**Current code:** Fate transitions to the `'fate'` phase; once the Fate prompt
+resolves, the phase machine advances to `'end'` (no return to actions).
+
+### Q11 — Coupling of `fateOpponent` to a Fate icon
+
+The plan §3 step 4 says the Fate phase is entered "only if `gainPower 2` was
+traded for it via the `Fate` icon, OR the villain's icon row contains a `fate`
+symbol and they activate it." Does dispatching `fateOpponent` require a
+matching Fate icon spent at the current location, or may a player Fate freely?
+**Current code:** `fateOpponent` is independently legal during the Actions or
+Fate phase; no icon prerequisite. Related to Q2.

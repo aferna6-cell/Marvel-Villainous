@@ -33,13 +33,30 @@ left blank for the user to fill in from their own physical copy.
 | A pending prompt blocks all other actions        | `validate.ts` — top of `isLegal`         |            |      |
 | No actions once the game has a winner            | `validate.ts` — top of `isLegal`         |            |      |
 
+## Phase machine (CHUNK 4)
+
+| Rule                                                   | Code location                                    | Rulebook § | Page |
+| ------------------------------------------------------- | ------------------------------------------------- | ---------- | ---- |
+| Phase order: start → move → actions → (fate) → end      | `engine/state.ts` — `phaseRegistry`, `autoAdvance` |          |      |
+| Start of turn enters the Move phase and fires triggers  | `engine/phases/startOfTurn.ts` — `applyStartTurn` |            |      |
+| Start of turn resets per-turn `usedIcons`               | `engine/phases/startOfTurn.ts` — `applyStartTurn` |            |      |
+| Start of turn resets `mustMoveDifferent` to `true`      | `engine/phases/startOfTurn.ts` — `applyStartTurn` |            |      |
+| Move + Actions are player-driven (no auto-advance)      | `engine/phases/mainPhase.ts` — `canAdvance` false |            |      |
+| Villain MUST move to a different location               | `engine/validate.ts` — `moveVillain` case         |            |      |
+| Movement override: card effects may flip the flag       | `engine/types.ts` — `PlayerState.mustMoveDifferent`|           |      |
+| Fate reveals 2, plays 1, discards 1                     | `engine/actions/fate.ts` — `applyFate` + `resolveFatePlay` |  |    |
+| Fate phase exits to End phase once the prompt resolves  | `engine/phases/fatePhase.ts` — `runAutomatic`     |            |      |
+| End of turn draws back up to the player's hand size     | `engine/phases/endOfTurn.ts` — `runAutomatic`     |            |      |
+| Per-player hand size override                           | `engine/types.ts` — `PlayerState.handSize`        |            |      |
+| Turn passes in `playerOrder`; turn++ on wrap            | `engine/phases/endOfTurn.ts` — `runAutomatic`     |            |      |
+
 ## Engine mechanics
 
 | Rule                                            | Code location                          | Rulebook § | Page |
 | ------------------------------------------------ | ---------------------------------------- | ---------- | ---- |
 | Empty draw pile reshuffles the discard pile      | `engine/cards/effects.ts` — `reshuffleDeck` |          |      |
 | Empty Fate deck reshuffles the Fate discard      | `engine/actions/fate.ts` — `applyFate`   |            |      |
-| Turn passes in `playerOrder`; turn++ on wrap     | `engine/actions/endTurn.ts` — `applyEndTurn` |        |      |
+| A pending prompt halts the auto-advance loop     | `engine/state.ts` — `autoAdvance`         |            |      |
 
 ## Not yet enforced (pending later milestones)
 

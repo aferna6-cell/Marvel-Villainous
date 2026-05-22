@@ -29,6 +29,7 @@ function makeState(): GameState {
     realm: makeRealm(),
     flags: {},
     objectiveProgress: { completed: false, steps: {} },
+    mustMoveDifferent: true,
   };
   return {
     seed: 1,

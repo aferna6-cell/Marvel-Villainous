@@ -25,6 +25,7 @@ import type {
   PlayerState,
   Prompt,
   PromptChoice,
+  PromptContinuation,
   TriggerSpec,
   VillainKey,
 } from '../types';
@@ -283,16 +284,100 @@ export function applyEffects(
   return s;
 }
 
-/** Resolve the current pending prompt. CHUNK 4 adds deferred-effect continuation. */
+/** Resolve the current pending prompt, running any attached continuation. */
 export function applyResolvePrompt(state: GameState, choice: PromptChoice): GameState {
-  const s = cloneState(state);
-  const prompt = s.pendingPrompt;
+  const prompt = state.pendingPrompt;
   if (prompt === null) throw new Error('applyResolvePrompt: no pending prompt');
+
+  if (prompt.continuation?.kind === 'fatePlay') {
+    return resolveFatePlay(state, prompt.continuation, choice);
+  }
+
+  const s = cloneState(state);
   s.log.push({
     turn: s.turn,
     player: prompt.player,
     message: `resolved prompt "${prompt.message}" with ${choice.kind}`,
   });
   s.pendingPrompt = null;
+  return s;
+}
+
+/**
+ * Fate-prompt continuation (marvel-villainous-plan.md §4). The active player
+ * has revealed two cards from `opponent`'s Fate deck; `choice` names the one
+ * to play. The other goes to the Fate discard. Heroes/conditions are placed
+ * on the opponent's realm; fateEffect cards resolve their effects against the
+ * opponent and then go to discard.
+ */
+function resolveFatePlay(
+  state: GameState,
+  continuation: Extract<PromptContinuation, { kind: 'fatePlay' }>,
+  choice: PromptChoice,
+): GameState {
+  if (choice.kind !== 'card') {
+    throw new Error('resolveFatePlay: expected a card choice');
+  }
+  if (!continuation.revealed.includes(choice.cardId)) {
+    throw new Error('resolveFatePlay: chosen card was not among the revealed cards');
+  }
+
+  let s = cloneState(state);
+  const opponent = s.players[continuation.opponent];
+  if (!opponent) throw new Error('resolveFatePlay: opponent missing');
+
+  // Remove the revealed cards from the top of the Fate deck (we peeked at them
+  // when fating; now we commit by removing them).
+  for (const cardId of continuation.revealed) {
+    const idx = opponent.fateDeck.indexOf(cardId);
+    if (idx !== -1) opponent.fateDeck.splice(idx, 1);
+  }
+
+  const playedId = choice.cardId;
+  const discardedId = continuation.revealed.find((id) => id !== playedId);
+  if (discardedId !== undefined) opponent.fateDiscard.push(discardedId);
+
+  s.pendingPrompt = null;
+  s.log.push({
+    turn: s.turn,
+    player: state.activePlayer,
+    message: `Fate-played ${playedId} against ${continuation.opponent}`,
+  });
+
+  const def = getCard(playedId);
+  if (!def) {
+    // Unknown card: dump it to fateDiscard so play can continue. Real card
+    // data lands in later chunks; stubs may be untyped placeholders.
+    opponent.fateDiscard.push(playedId);
+    return s;
+  }
+
+  if (def.type === 'hero' || def.type === 'condition') {
+    // CHUNK 4 placement default: location 0. Choosing the destination is a
+    // rulebook detail — see RULES_QUESTIONS.md.
+    const loc = opponent.realm.locations[0];
+    if (loc) {
+      const inPlay = {
+        instanceId: `inst-${s.instanceCounter}`,
+        cardId: playedId,
+        strengthModifier: 0,
+        tokens: {},
+      };
+      s.instanceCounter += 1;
+      if (def.type === 'hero') loc.heroesPresent.push(inPlay);
+      else loc.conditions.push(inPlay);
+    }
+    return s;
+  }
+
+  if (def.type === 'fateEffect') {
+    s = applyEffects(s, def.effects, { player: continuation.opponent, sourceCardId: playedId });
+    const opp = s.players[continuation.opponent];
+    if (opp) opp.fateDiscard.push(playedId);
+    return s;
+  }
+
+  // Any other type (unexpected on a fate deck): send to discard.
+  opponent.fateDiscard.push(playedId);
   return s;
 }

@@ -43,6 +43,7 @@ function makePlayer(id: PlayerId, villain: VillainKey): PlayerState {
     realm: makeRealm(villain),
     flags: { sampleCounter: 2, sampleList: ['a', 'b'] },
     objectiveProgress: { completed: false, steps: { stones: 0 } },
+    mustMoveDifferent: true,
   };
 }
 

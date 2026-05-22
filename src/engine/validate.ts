@@ -64,9 +64,10 @@ export function isLegal(state: GameState, action: Action): Legality {
 
     case 'moveVillain': {
       if (state.phase !== 'move') return illegal('can only move during the move phase');
-      const realm = activePlayerState(state).realm;
-      // §3: the villain MUST move to a different location.
-      if (action.to === realm.villainTokenAt) {
+      const player = activePlayerState(state);
+      // §3: the villain MUST move to a different location *unless* an effect
+      // has flipped `mustMoveDifferent` for this turn.
+      if (player.mustMoveDifferent && action.to === player.realm.villainTokenAt) {
         return illegal('the villain must move to a different location');
       }
       return true;

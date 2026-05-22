@@ -134,6 +134,9 @@ export type PromptChoice =
 /**
  * A pending decision the engine cannot make on its own. The reducer pauses
  * with this set; the UI (or advisor) resolves it via a `resolvePrompt` action.
+ *
+ * `continuation` lets the prompt carry the data needed to resume a multi-step
+ * effect (e.g. a Fate decision needs to know which two cards were revealed).
  */
 export interface Prompt {
   id: string;
@@ -141,7 +144,15 @@ export interface Prompt {
   kind: 'chooseTarget' | 'optional' | 'chooseCard' | 'chooseLocation';
   message: string;
   choices: PromptChoice[];
+  continuation?: PromptContinuation;
 }
+
+/** Discriminated continuation for resolving a prompt. */
+export type PromptContinuation = {
+  kind: 'fatePlay';
+  opponent: PlayerId;
+  revealed: CardId[];
+};
 
 // --- Players & game state --------------------------------------------------
 
@@ -167,6 +178,18 @@ export interface PlayerState {
    */
   flags: Record<string, unknown>;
   objectiveProgress: ObjectiveProgress;
+  /**
+   * Per-villain hand-size override. When `undefined`, the engine falls back
+   * to the global default (`util.DEFAULT_HAND_SIZE`). Villains whose printed
+   * rules diverge from the default override this.
+   */
+  handSize?: number;
+  /**
+   * Default `true`: at the start of a turn the villain MUST move to a
+   * *different* location (marvel-villainous-plan.md §3). Card effects may
+   * flip this for the current turn. Reset to `true` at start of turn.
+   */
+  mustMoveDifferent: boolean;
 }
 
 export type Phase = 'start' | 'move' | 'actions' | 'fate' | 'end';
@@ -208,7 +231,8 @@ export type TriggerEvent =
   | 'cardPlayed'
   | 'powerGained'
   | 'heroDefeated'
-  | 'allyDefeated';
+  | 'allyDefeated'
+  | 'conditionTick';
 
 /**
  * A queued triggered-ability event. `player` identifies whose realm the event
