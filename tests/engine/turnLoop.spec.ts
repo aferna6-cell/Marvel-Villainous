@@ -86,4 +86,17 @@ describe('scripted 4-turn 2-player loop', () => {
     const same = newGame({ villains: ['thanos', 'hela'], seed: 42 });
     expect(same.players.p1.hand).toEqual(game.players.p1.hand);
   });
+
+  it('newGame assigns starting Power per seat per the rulebook (0 / 1 / 2 / 2)', () => {
+    const game = newGame({ villains: ['thanos', 'hela', 'ultron', 'killmonger'], seed: 7 });
+    expect(game.players.p1.power).toBe(0);
+    expect(game.players.p2.power).toBe(1);
+    expect(game.players.p3.power).toBe(2);
+    expect(game.players.p4.power).toBe(2);
+  });
+
+  it('starting hand size is 4 per the rulebook', () => {
+    const game = newGame({ villains: ['thanos'], seed: 11 });
+    expect(game.players.p1.hand).toHaveLength(4);
+  });
 });

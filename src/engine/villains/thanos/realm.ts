@@ -1,21 +1,32 @@
-// Thanos's realm: 4 locations on his printed board
-// (marvel-villainous-plan.md §5.1).
+// Thanos's realm: 4 locations on his printed board.
 //
-// The icon set per location depends on the printed board, which the assistant
-// cannot reproduce without the user's rulebook. See RULES_QUESTIONS.md Q12.
-// Until Q12 is answered the placeholder uses the generic `gainPower / play`
-// top row and `move / fate` bottom row from CHUNK 4's stub setup.
+// Rulebook (Ravensburger Marvel Villainous: Infinite Power) confirms Thanos's
+// four locations in left-to-right order: Sanctuary II, Titan, The Infinity
+// Well, Knowhere. Per the project's §0 ground rules the `name` field stays
+// empty in the repo; the location is identified by its id only.
+//
+// The exact icon set in each location's top/bottom row is the remaining
+// blocker — see RULES_QUESTIONS.md Q12. Until we have a clean transcription
+// the icon arrays use the generic placeholder set from CHUNK 4.
 
 import type { ActionIcon, Location, Realm } from '../../types';
 
-/** PLACEHOLDER top-row icons (Q12). */
+/** PLACEHOLDER top-row (always-usable, player-side) icons — pending Q12. */
 const TOP_PLACEHOLDER: ActionIcon[] = ['gainPower', 'play'];
-/** PLACEHOLDER bottom-row icons (Q12). */
+/** PLACEHOLDER bottom-row (Fate-side, covered by heroes) icons — pending Q12. */
 const BOTTOM_PLACEHOLDER: ActionIcon[] = ['move', 'fate'];
+
+/** Stable per-Thanos-location ids matching the rulebook left→right order. */
+export const THANOS_LOCATION_IDS = [
+  'thanos-loc-sanctuary-ii',
+  'thanos-loc-titan',
+  'thanos-loc-infinity-well',
+  'thanos-loc-knowhere',
+] as const;
 
 function thanosLocation(idx: number): Location {
   return {
-    id: `thanos-loc-${idx}`,
+    id: THANOS_LOCATION_IDS[idx] ?? `thanos-loc-${idx}`,
     name: '', // user fills from the physical board — see assets/CONTENT_TODO.md
     topIcons: [...TOP_PLACEHOLDER],
     bottomIcons: [...BOTTOM_PLACEHOLDER],

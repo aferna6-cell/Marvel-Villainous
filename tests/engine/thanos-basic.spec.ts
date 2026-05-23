@@ -82,13 +82,14 @@ describe('Thanos M2 — gain power, play ally, vanquish a dummy hero', () => {
     s = reduce(s, { kind: 'playCard', cardId: 'test-thanos-ally' });
     s = reduce(s, {
       kind: 'attackHero',
-      allyId: 'test-thanos-ally',
+      allyIds: ['test-thanos-ally'],
       heroId: 'test-dummy-hero',
     });
     expect(s.players.p1.realm.locations[0]?.heroesPresent).toHaveLength(0);
     expect(s.players.p1.fateDiscard).toContain('test-dummy-hero');
-    // The ally remains in play after vanquishing.
-    expect(s.players.p1.realm.locations[0]?.alliesPresent).toHaveLength(1);
+    // Rulebook Vanquish: the spent ally is discarded along with the hero.
+    expect(s.players.p1.realm.locations[0]?.alliesPresent).toHaveLength(0);
+    expect(s.players.p1.discard).toContain('test-thanos-ally');
     // With the hero gone the bottom-row icons are no longer covered.
     expect(() => reduce(s, { kind: 'useIcon', location: 0, iconIndex: 2 })).not.toThrow();
   });

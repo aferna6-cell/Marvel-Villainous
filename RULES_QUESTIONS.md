@@ -46,12 +46,15 @@ When a player plays an ally, item, or condition, is it placed at the villain's
 current location, or may the player choose any location?
 **Current code:** placed at the villain's current location (`actions/playCard.ts`).
 
-### Q6 — Vanquish strength comparison
+### Q6 — Vanquish strength comparison (RESOLVED)
 
-Does Vanquish compare the summed strength of *all* allies at the hero's
-location against the hero, or one named ally at a time?
-**Current code:** one named ally vs. one hero; ally strength ≥ hero strength
-defeats it (`actions/attack.ts`).
+Confirmed from the rulebook example: Vanquish sums the strength of the
+*named* allies at the hero's location and discards every spent ally along
+with the hero. Quote: "two of the Allies have a combined Strength of 5 (4+1)
+… Discard the Hero and the two Allies. The third Ally remains at the
+location." The `attackHero` action now takes `allyIds: CardId[]`, the
+reducer sums effective strengths, and on success discards the spent allies
+(`engine/actions/attack.ts`).
 
 ### Q7 — Turn-scoped strength boosts
 
@@ -99,34 +102,31 @@ Fate phase; no icon prerequisite. Related to Q2.
 
 ## Open questions (raised in CHUNK 5 — Thanos)
 
-These are blocking questions: the chunk explicitly directs the assistant to
-stop a thread of work and ask if any per-Thanos data is unknown. The relevant
-engine files keep their CHUNK 4 generic stubs until each question is answered.
+Resolved-or-narrowed in CHUNK 5 follow-up via the Ravensburger rulebook PDF.
 
-### Q12 — Thanos's realm: per-location icons
+### Q12 — Thanos's realm: per-location icons (PARTIAL — still blocked)
 
-For each of Thanos's four locations on the printed board, what is:
-1. The location's printed name (for the user's own reference; the repo keeps
-   `name: ''`).
-2. The exact set and order of **top-row** action icons.
-3. The exact set and order of **bottom-row** action icons (the ones covered
-   when a hero arrives).
+Thanos's four locations from the rulebook are: **Sanctuary II, Titan, The
+Infinity Well, Knowhere** (encoded as location ids; `name` stays `''` in repo
+per §0). Partial info gathered from the Marvel Villainous Wiki: Sanctuary II's
+covered row includes Activate; Titan's covered row includes Fate; Knowhere's
+four icons are Relocate, Fate, Play a Card, Vanquish (covered row includes
+Relocate). The Infinity Well's icons are not yet confirmed.
 
-**Current code:** `engine/villains/thanos/realm.ts` ships a generic
-placeholder of `top: [gainPower, play]`, `bottom: [move, fate]` per location.
-Replace once the user provides the printed board.
+**Still needed:** the exact top/bottom icon split for every location.
+**Current code:** `engine/villains/thanos/realm.ts` ships placeholder icons
+(`top: [gainPower, play]`, `bottom: [move, fate]`) per location.
 
-### Q13 — Thanos's starting numbers
+### Q13 — Thanos's starting numbers (RESOLVED)
 
-What are the rulebook-printed values for Thanos's:
-1. Starting Power.
-2. Starting hand size (the draw-up-to limit at end of turn).
-3. Starting deck size (how many cards are in the deck after dealing the
-   starting hand — implied by deck composition).
-4. Any per-villain mover rule exceptions (e.g. may stay at current location).
-
-**Current code:** starting Power = 0; `PlayerState.handSize` is `undefined`
-so the engine uses the global default of 4. Deck stub has 8 cards.
+From the rulebook setup:
+1. Starting Power: **1st player 0, 2nd 1, 3rd 2, 4th 2** (encoded in
+   `engine/setup.ts` — `startingPower`).
+2. Starting hand size: **4 cards** ("Draw a starting hand of four cards";
+   "draw back up to four cards"). Default in `engine/util.ts`.
+3. Deck size: **30 cards per villain deck** ("5 Villain Decks (30 cards in
+   each deck)"). Currently stubbed at 8 in `villains/thanos/deck.ts`.
+4. No Thanos-specific movement exception confirmed.
 
 ### Q14 — Thanos's villain deck composition
 

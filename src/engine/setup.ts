@@ -46,9 +46,20 @@ function makeEmptySeat(id: PlayerId): PlayerState {
   };
 }
 
+/**
+ * Starting Power by seat order, per the printed rulebook setup:
+ * 1st player begins with 0; 2nd with 1; 3rd and 4th with 2 each.
+ */
+function startingPower(seatIndex: number): number {
+  if (seatIndex === 0) return 0;
+  if (seatIndex === 1) return 1;
+  return 2;
+}
+
 function makeSeatedPlayer(
   id: PlayerId,
   villain: VillainKey,
+  seatIndex: number,
   seed: number,
   cursor: number,
 ): { player: PlayerState; nextCursor: number } {
@@ -69,7 +80,7 @@ function makeSeatedPlayer(
     player: {
       id,
       villain,
-      power: 0,
+      power: startingPower(seatIndex),
       hand,
       deck,
       discard: [],
@@ -110,7 +121,7 @@ export function newGame(opts: NewGameOpts): GameState {
     if (!seat) continue;
     const villain = opts.villains[i];
     if (villain !== undefined) {
-      const r = makeSeatedPlayer(seat, villain, opts.seed, cursor);
+      const r = makeSeatedPlayer(seat, villain, i, opts.seed, cursor);
       built[seat] = r.player;
       cursor = r.nextCursor;
       playerOrder.push(seat);

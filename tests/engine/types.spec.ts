@@ -44,7 +44,7 @@ describe('Action union', () => {
         case 'playCard':
           return a.cardId;
         case 'attackHero':
-          return `${a.allyId}->${a.heroId}`;
+          return `${a.allyIds.join('+')}->${a.heroId}`;
         case 'discardCards':
           return a.cardIds.join(',');
         case 'drawToHandSize':

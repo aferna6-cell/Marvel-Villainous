@@ -107,7 +107,7 @@ export function reduce(state: GameState, action: Action): GameState {
       next = applyPlayCard(state, action.cardId, action.target);
       break;
     case 'attackHero':
-      next = applyAttack(state, action.allyId, action.heroId);
+      next = applyAttack(state, action.allyIds, action.heroId);
       break;
     case 'discardCards':
       next = applyDiscard(state, action.cardIds);

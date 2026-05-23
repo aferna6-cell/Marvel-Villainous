@@ -78,7 +78,7 @@ describe('purity — no action mutates state in place', () => {
     ]);
     const game = makeGame({ phase: 'actions' });
     game.players.p1.realm = realm;
-    expectPure(game, { kind: 'attackHero', allyId: 'ally-1', heroId: 'hero-1' });
+    expectPure(game, { kind: 'attackHero', allyIds: ['ally-1'], heroId: 'hero-1' });
   });
 
   it('resolvePrompt', () => {

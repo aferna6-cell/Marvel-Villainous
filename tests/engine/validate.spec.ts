@@ -96,7 +96,7 @@ describe('isLegal — playing cards (§3, §11)', () => {
 describe('isLegal — attacking heroes (§4)', () => {
   it('rejects attacking with an ally not in play', () => {
     const game = makeGame({ phase: 'actions' });
-    const result = isLegal(game, { kind: 'attackHero', allyId: 'ally-1', heroId: 'hero-1' });
+    const result = isLegal(game, { kind: 'attackHero', allyIds: ['ally-1'], heroId: 'hero-1' });
     expect(reason(result)).toContain('not in play');
   });
 
@@ -109,7 +109,7 @@ describe('isLegal — attacking heroes (§4)', () => {
     ]);
     const game = makeGame({ phase: 'actions' });
     game.players.p1.realm = realm;
-    const result = isLegal(game, { kind: 'attackHero', allyId: 'ally-1', heroId: 'hero-1' });
+    const result = isLegal(game, { kind: 'attackHero', allyIds: ['ally-1'], heroId: 'hero-1' });
     expect(reason(result)).toContain('same location');
   });
 
@@ -125,7 +125,7 @@ describe('isLegal — attacking heroes (§4)', () => {
     ]);
     const game = makeGame({ phase: 'actions' });
     game.players.p1.realm = realm;
-    expect(isLegal(game, { kind: 'attackHero', allyId: 'ally-1', heroId: 'hero-1' })).toBe(true);
+    expect(isLegal(game, { kind: 'attackHero', allyIds: ['ally-1'], heroId: 'hero-1' })).toBe(true);
   });
 });
 

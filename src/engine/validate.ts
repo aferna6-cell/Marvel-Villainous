@@ -114,14 +114,20 @@ export function isLegal(state: GameState, action: Action): Legality {
 
     case 'attackHero': {
       if (state.phase !== 'actions') return illegal('can only attack during the actions phase');
+      if (action.allyIds.length === 0) return illegal('no attacking allies named');
       const realm = activePlayerState(state).realm;
-      const ally = findInPlay(realm.locations, action.allyId, 'ally');
-      if (!ally) return illegal('that ally is not in play');
       const hero = findInPlay(realm.locations, action.heroId, 'hero');
       if (!hero) return illegal('that hero is not in play');
-      // §4: an ally can only attack a hero at the same location.
-      if (ally.location !== hero.location) {
-        return illegal('the ally and hero must be at the same location');
+      const seen = new Set<string>();
+      for (const id of action.allyIds) {
+        if (seen.has(id)) return illegal(`ally "${id}" listed twice`);
+        seen.add(id);
+        const ally = findInPlay(realm.locations, id, 'ally');
+        if (!ally) return illegal(`ally "${id}" is not in play`);
+        // §4: every named ally must be at the same location as the hero.
+        if (ally.location !== hero.location) {
+          return illegal('every attacking ally must be at the same location as the hero');
+        }
       }
       return true;
     }

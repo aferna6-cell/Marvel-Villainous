@@ -265,7 +265,7 @@ export type Action =
   | { kind: 'moveVillain'; to: LocationIndex }
   | { kind: 'useIcon'; location: LocationIndex; iconIndex: number }
   | { kind: 'playCard'; cardId: CardId; target?: TargetSpec }
-  | { kind: 'attackHero'; allyId: CardId; heroId: CardId }
+  | { kind: 'attackHero'; allyIds: CardId[]; heroId: CardId }
   | { kind: 'discardCards'; cardIds: CardId[] }
   | { kind: 'drawToHandSize' }
   | { kind: 'fateOpponent'; opponent: PlayerId }
