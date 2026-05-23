@@ -16,16 +16,18 @@ export function defeatHero(
   heroInstanceId: InstanceId,
 ): GameState {
   const s = cloneState(state);
-  const player = s.players[owner];
-  if (!player) throw new Error('defeatHero: owner missing');
-  const loc = player.realm.locations[locationIdx];
+  const owningPlayer = s.players[owner];
+  if (!owningPlayer) throw new Error('defeatHero: owner missing');
+  const loc = owningPlayer.realm.locations[locationIdx];
   if (!loc) throw new Error('defeatHero: location missing');
 
   const hero = loc.heroesPresent.find((h) => h.instanceId === heroInstanceId);
   if (!hero) throw new Error('defeatHero: hero not at that location');
 
   loc.heroesPresent = loc.heroesPresent.filter((h) => h.instanceId !== heroInstanceId);
-  player.fateDiscard.push(hero.cardId);
+  // Hero goes to the SHARED Fate discard pile (rulebook Setup §3: one Fate
+  // deck and one discard pile for all players).
+  s.fateDiscard.push(hero.cardId);
   s.log.push({ turn: s.turn, player: owner, message: `hero ${hero.cardId} defeated` });
   s.pendingTriggers.push({
     event: 'heroDefeated',

@@ -169,8 +169,6 @@ export interface PlayerState {
   hand: CardId[];
   deck: CardId[]; // draw pile (order matters)
   discard: CardId[];
-  fateDeck: CardId[];
-  fateDiscard: CardId[];
   realm: Realm;
   /**
    * Villain-specific state. Kept JSON-serializable so the engine stays
@@ -211,6 +209,14 @@ export interface GameState {
   log: LogEntry[];
   winner: PlayerId | null;
   pendingPrompt: Prompt | null; // for cards that need a choice
+  /**
+   * The single shared Fate deck. Per the printed rulebook (Setup §3): "Shuffle
+   * together the Common Fate deck and the Fate decks from all Villains playing
+   * this game to create a single Fate deck." Earlier chunks modeled this as a
+   * per-player fateDeck which was incorrect — corrected in CHUNK 6.
+   */
+  fateDeck: CardId[];
+  fateDiscard: CardId[];
   /**
    * Event-bus queue for triggered abilities. Filled by actions/effects and
    * drained (FIFO) at the end of every action before the reducer returns.

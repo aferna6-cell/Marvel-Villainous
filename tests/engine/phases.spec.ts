@@ -57,24 +57,22 @@ describe('Fate phase', () => {
   it('fateOpponent enters the fate phase and parks a fatePlay continuation', () => {
     registerCards([
       makeCard({ id: 'fc1', villain: 'fate-hela', type: 'hero', strength: 2 }),
-      makeCard({ id: 'fc2', villain: 'fate-hela', type: 'condition', cost: 0 }),
     ]);
-    const game = makeGame({ phase: 'actions' });
-    game.players.p2.fateDeck = ['fc1', 'fc2'];
+    // Single shared Fate deck (rulebook Setup §3).
+    const game = makeGame({ phase: 'actions', fateDeck: ['fc1'] });
     const next = reduce(game, { kind: 'fateOpponent', opponent: 'p2' });
     expect(next.phase).toBe('fate');
     expect(next.pendingPrompt?.continuation?.kind).toBe('fatePlay');
+    // Rulebook: reveal ONE card. The choice is "play it" or "discard with no effect".
     expect(next.pendingPrompt?.choices).toHaveLength(2);
   });
 
   it('resolving a fate prompt places a hero and cascades all the way to next player', () => {
     registerCards([
       makeCard({ id: 'fc1', villain: 'fate-hela', type: 'hero', strength: 2 }),
-      makeCard({ id: 'fc2', villain: 'fate-hela', type: 'condition', cost: 0 }),
     ]);
-    const game = makeGame({ phase: 'actions' });
+    const game = makeGame({ phase: 'actions', fateDeck: ['fc1'] });
     game.players.p1.deck = ['p1-d1', 'p1-d2', 'p1-d3'];
-    game.players.p2.fateDeck = ['fc1', 'fc2'];
     const fated = reduce(game, { kind: 'fateOpponent', opponent: 'p2' });
     const resolved = reduce(fated, {
       kind: 'resolvePrompt',
@@ -83,7 +81,6 @@ describe('Fate phase', () => {
     expect(resolved.pendingPrompt).toBeNull();
     expect(resolved.players.p2.realm.locations[0]?.heroesPresent).toHaveLength(1);
     expect(resolved.players.p2.realm.locations[0]?.heroesPresent[0]?.cardId).toBe('fc1');
-    expect(resolved.players.p2.fateDiscard).toContain('fc2');
     expect(resolved.activePlayer).toBe('p2');
     expect(resolved.phase).toBe('move');
   });

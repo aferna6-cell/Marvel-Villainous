@@ -24,8 +24,6 @@ function makeState(): GameState {
     hand: [],
     deck: [],
     discard: [],
-    fateDeck: [],
-    fateDiscard: [],
     realm: makeRealm(),
     flags: {},
     objectiveProgress: { completed: false, steps: {} },
@@ -45,6 +43,8 @@ function makeState(): GameState {
     pendingTriggers: [],
     usedIcons: [],
     instanceCounter: 0,
+    fateDeck: [],
+    fateDiscard: [],
   };
 }
 

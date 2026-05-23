@@ -1,19 +1,24 @@
 // Game setup (marvel-villainous-plan.md §10 M1+ / §13).
 //
-// `newGame({ villains, seed })` builds an initial `GameState` for 2-4 players.
+// `newGame({ villains, seed })` builds an initial `GameState` for 1-4 players.
 // It clears the card registry, registers every involved villain's deck and
-// Fate deck, deals each seated player a starting hand, and auto-advances the
-// engine past the `'start'` phase so the first player begins ready to move.
-//
-// The deck data registered here is the mechanical scaffold filled in CHUNK 5+
-// (M4 for Thanos, etc.). Per-villain starting power and hand size are
-// rulebook details and remain at the generic defaults — see RULES_QUESTIONS.
+// Fate deck, deals each seated player a starting hand, builds the single
+// shared Fate deck by shuffling together every participating villain's Fate
+// deck (rulebook Setup §3 — the Common Fate deck of 15 cards is pending real
+// card data; see RULES_QUESTIONS Q15), and auto-advances the engine past the
+// `'start'` phase so the first player begins ready to move.
 
 import { shuffle } from './rng';
 import { clearRegistry, registerCards } from './cards/registry';
 import { autoAdvance } from './state';
 import { villains as villainData } from './villains/index';
-import type { CardDef, GameState, PlayerId, PlayerState, VillainKey } from './types';
+import type {
+  CardDef,
+  GameState,
+  PlayerId,
+  PlayerState,
+  VillainKey,
+} from './types';
 
 const SEATS: readonly PlayerId[] = ['p1', 'p2', 'p3', 'p4'];
 
@@ -21,7 +26,7 @@ const SEATS: readonly PlayerId[] = ['p1', 'p2', 'p3', 'p4'];
 const STARTING_HAND_SIZE = 4;
 
 export interface NewGameOpts {
-  /** Villain keys for each seated player, in seat order (p1, p2, p3, p4). 2-4 entries. */
+  /** Villain keys for each seated player, in seat order (p1, p2, p3, p4). 1-4 entries. */
   villains: VillainKey[];
   /** Seed for the shuffled decks and all in-game randomness. */
   seed: number;
@@ -37,8 +42,6 @@ function makeEmptySeat(id: PlayerId): PlayerState {
     hand: [],
     deck: [],
     discard: [],
-    fateDeck: [],
-    fateDiscard: [],
     realm: villainData.thanos.makeRealm(),
     flags: {},
     objectiveProgress: { completed: false, steps: {} },
@@ -69,11 +72,6 @@ function makeSeatedPlayer(
     seed,
     cursor,
   );
-  const fateResult = shuffle(
-    data.fateDeck.map((c) => c.id),
-    seed,
-    deckResult.nextCursor,
-  );
   const deck = deckResult.items;
   const hand = deck.splice(0, STARTING_HAND_SIZE);
   return {
@@ -84,21 +82,16 @@ function makeSeatedPlayer(
       hand,
       deck,
       discard: [],
-      fateDeck: fateResult.items,
-      fateDiscard: [],
       realm: data.makeRealm(),
       flags: {},
       objectiveProgress: { completed: false, steps: {} },
       mustMoveDifferent: true,
     },
-    nextCursor: fateResult.nextCursor,
+    nextCursor: deckResult.nextCursor,
   };
 }
 
 export function newGame(opts: NewGameOpts): GameState {
-  // The full game is 2-4 players, but CHUNK 5 (M2) ships a 1-player solo
-  // experience for Thanos and the engine reducer handles solo loops cleanly,
-  // so the lower bound is 1.
   if (opts.villains.length < 1 || opts.villains.length > 4) {
     throw new Error(`newGame: expected 1-4 villains, got ${opts.villains.length}`);
   }
@@ -143,6 +136,17 @@ export function newGame(opts: NewGameOpts): GameState {
   const first = playerOrder[0];
   if (!first) throw new Error('newGame: no seated players');
 
+  // Build the single shared Fate deck — rulebook Setup §3: shuffle the
+  // Common Fate deck and every participating villain's Fate deck together.
+  // CHUNK 6: only the per-villain Fate cards are stubbed; the 15-card
+  // Common Fate deck is pending real card data (RULES_QUESTIONS Q15).
+  const sharedFateCards: string[] = [];
+  for (const v of opts.villains) {
+    sharedFateCards.push(...villainData[v].fateDeck.map((c) => c.id));
+  }
+  const fateShuffle = shuffle(sharedFateCards, opts.seed, cursor);
+  cursor = fateShuffle.nextCursor;
+
   const initial: GameState = {
     seed: opts.seed,
     rngCursor: cursor,
@@ -159,6 +163,8 @@ export function newGame(opts: NewGameOpts): GameState {
     pendingTriggers: [],
     usedIcons: [],
     instanceCounter: 0,
+    fateDeck: fateShuffle.items,
+    fateDiscard: [],
   };
 
   // Skip the Start phase so the first player is immediately ready to move.

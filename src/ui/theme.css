@@ -349,6 +349,44 @@ button {
   color: rgba(255, 255, 255, 0.75);
 }
 
+/* --- FatePanel --------------------------------------------------------- */
+
+.fate-panel {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 5, 16, 0.78);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  z-index: 50;
+  padding: 2rem;
+}
+
+.fate-panel__title {
+  margin: 0;
+  color: var(--accent);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.fate-panel__target {
+  margin: 0;
+  color: var(--text-dim);
+}
+
+.fate-panel__card .card {
+  width: 9rem;
+  height: 12rem;
+  font-size: 0.85rem;
+}
+
+.fate-panel__actions {
+  display: flex;
+  gap: 0.6rem;
+}
+
 /* --- Log --------------------------------------------------------------- */
 
 .log {

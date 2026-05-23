@@ -192,7 +192,8 @@ export function applyEffect(state: GameState, effect: EffectSpec, ctx: EffectCon
             loc.heroesPresent = loc.heroesPresent.filter(
               (h) => h.instanceId !== only.hero.instanceId,
             );
-            player.fateDiscard.push(only.hero.cardId);
+            // Defeated hero goes to the SHARED Fate discard (rulebook §3).
+            s.fateDiscard.push(only.hero.cardId);
             log(s, ctx, `defeated hero ${only.hero.cardId}`);
             enqueue(s, {
               event: 'heroDefeated',
@@ -304,40 +305,57 @@ export function applyResolvePrompt(state: GameState, choice: PromptChoice): Game
 }
 
 /**
- * Fate-prompt continuation (marvel-villainous-plan.md §4). The active player
- * has revealed two cards from `opponent`'s Fate deck; `choice` names the one
- * to play. The other goes to the Fate discard. Heroes/conditions are placed
- * on the opponent's realm; fateEffect cards resolve their effects against the
- * opponent and then go to discard.
+ * Fate-prompt continuation (rulebook "Fate" action). The active player
+ * revealed ONE card from the shared Fate deck. The choice is either:
+ *  - `{ kind: 'card', cardId }` — play the revealed card on the fated opponent;
+ *  - `{ kind: 'skip' }` — discard with no effect (rulebook: "If you draw a
+ *     Fate card and cannot play it for whatever reason, discard it with no
+ *     effect.").
+ *
+ * Heroes / conditions are placed on the opponent's realm (CHUNK 6 default:
+ * location 0 — pending RULES_QUESTIONS Q9 for per-card placement rules).
+ * fateEffect cards resolve against the opponent and then go to the shared
+ * Fate discard. The revealed card is always removed from the top of the
+ * shared Fate deck.
  */
 function resolveFatePlay(
   state: GameState,
   continuation: Extract<PromptContinuation, { kind: 'fatePlay' }>,
   choice: PromptChoice,
 ): GameState {
-  if (choice.kind !== 'card') {
-    throw new Error('resolveFatePlay: expected a card choice');
-  }
-  if (!continuation.revealed.includes(choice.cardId)) {
-    throw new Error('resolveFatePlay: chosen card was not among the revealed cards');
+  if (choice.kind !== 'card' && choice.kind !== 'skip') {
+    throw new Error('resolveFatePlay: expected a card or skip choice');
   }
 
   let s = cloneState(state);
   const opponent = s.players[continuation.opponent];
   if (!opponent) throw new Error('resolveFatePlay: opponent missing');
 
-  // Remove the revealed cards from the top of the Fate deck (we peeked at them
+  // Remove the revealed cards from the top of the SHARED Fate deck (we peeked
   // when fating; now we commit by removing them).
   for (const cardId of continuation.revealed) {
-    const idx = opponent.fateDeck.indexOf(cardId);
-    if (idx !== -1) opponent.fateDeck.splice(idx, 1);
+    const idx = s.fateDeck.indexOf(cardId);
+    if (idx !== -1) s.fateDeck.splice(idx, 1);
   }
 
-  const playedId = choice.cardId;
-  const discardedId = continuation.revealed.find((id) => id !== playedId);
-  if (discardedId !== undefined) opponent.fateDiscard.push(discardedId);
-
   s.pendingPrompt = null;
+
+  // Skip: rulebook lets the active player decline an unplayable Fate card.
+  // The revealed card goes straight to the shared Fate discard.
+  if (choice.kind === 'skip') {
+    for (const cardId of continuation.revealed) s.fateDiscard.push(cardId);
+    s.log.push({
+      turn: s.turn,
+      player: state.activePlayer,
+      message: `Fate discarded ${continuation.revealed.join(', ')} with no effect`,
+    });
+    return s;
+  }
+
+  if (!continuation.revealed.includes(choice.cardId)) {
+    throw new Error('resolveFatePlay: chosen card was not among the revealed cards');
+  }
+  const playedId = choice.cardId;
   s.log.push({
     turn: s.turn,
     player: state.activePlayer,
@@ -346,15 +364,14 @@ function resolveFatePlay(
 
   const def = getCard(playedId);
   if (!def) {
-    // Unknown card: dump it to fateDiscard so play can continue. Real card
-    // data lands in later chunks; stubs may be untyped placeholders.
-    opponent.fateDiscard.push(playedId);
+    // Unknown card: dump it to the shared Fate discard so play can continue.
+    s.fateDiscard.push(playedId);
     return s;
   }
 
   if (def.type === 'hero' || def.type === 'condition') {
-    // CHUNK 4 placement default: location 0. Choosing the destination is a
-    // rulebook detail — see RULES_QUESTIONS.md.
+    // CHUNK 6 placement default: location 0. Per-card placement target is
+    // RULES_QUESTIONS Q9.
     const loc = opponent.realm.locations[0];
     if (loc) {
       const inPlay = {
@@ -372,12 +389,11 @@ function resolveFatePlay(
 
   if (def.type === 'fateEffect') {
     s = applyEffects(s, def.effects, { player: continuation.opponent, sourceCardId: playedId });
-    const opp = s.players[continuation.opponent];
-    if (opp) opp.fateDiscard.push(playedId);
+    s.fateDiscard.push(playedId);
     return s;
   }
 
-  // Any other type (unexpected on a fate deck): send to discard.
-  opponent.fateDiscard.push(playedId);
+  // Any other type (unexpected on a fate card): send to the shared discard.
+  s.fateDiscard.push(playedId);
   return s;
 }

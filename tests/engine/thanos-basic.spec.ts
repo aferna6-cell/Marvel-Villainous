@@ -86,7 +86,8 @@ describe('Thanos M2 — gain power, play ally, vanquish a dummy hero', () => {
       heroId: 'test-dummy-hero',
     });
     expect(s.players.p1.realm.locations[0]?.heroesPresent).toHaveLength(0);
-    expect(s.players.p1.fateDiscard).toContain('test-dummy-hero');
+    // Hero goes to the SHARED Fate discard (rulebook Setup §3).
+    expect(s.fateDiscard).toContain('test-dummy-hero');
     // Rulebook Vanquish: the spent ally is discarded along with the hero.
     expect(s.players.p1.realm.locations[0]?.alliesPresent).toHaveLength(0);
     expect(s.players.p1.discard).toContain('test-thanos-ally');

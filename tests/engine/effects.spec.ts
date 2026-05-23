@@ -83,7 +83,8 @@ describe('applyEffect — every EffectSpec variant (§2.3)', () => {
     game.players.p1.realm = realm;
     const next = applyEffect(game, { op: 'defeatHero', whereFilter: {} }, ctx);
     expect(next.players.p1.realm.locations[0]?.heroesPresent).toHaveLength(0);
-    expect(next.players.p1.fateDiscard).toContain('hero-1');
+    // Defeated hero goes to the SHARED Fate discard (rulebook Setup §3).
+    expect(next.fateDiscard).toContain('hero-1');
     expect(next.pendingTriggers.some((t) => t.event === 'heroDefeated')).toBe(true);
   });
 

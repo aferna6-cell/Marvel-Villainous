@@ -65,7 +65,32 @@ Per-card worksheet (fill one row per card in the printed deck):
 
 ## Thanos — Fate deck (`engine/villains/thanos/fateDeck.ts`)
 
-Pending CHUNK 6.
+11-card structure confirmed from the rulebook + components page:
+
+| #   | Type      | Identifier (for your reference; `name` stays '' in code) | strength | effects (mechanical) | icons covered |
+| --- | --------- | -------------------------------------------------------- | -------- | -------------------- | -------------- |
+| 1   | hero      | Adam Warlock                                             | TODO     | TODO (rulebook: blocks Thanos's win while in Domain) | TODO |
+| 2   | hero      | Drax the Destroyer                                       | TODO     | TODO (rulebook: requires ≥ 2 Allies to vanquish)      | TODO |
+| 3   | hero      | Gamora                                                   | TODO     | TODO (rulebook: can target Allies/Heroes/Rivals)     | TODO |
+| 4   | hero      | Nebula                                                   | TODO     | TODO (rulebook: gains +1 Strength tokens per Stone)  | TODO |
+| 5   | effect    | A Stone Is Found (copy 1 of N)                            | —        | TODO (rulebook: targeted Villain takes a random Stone) | — |
+| 6   | effect    | A Stone Is Found (copy 2 of N)                            | —        | TODO                                                  | — |
+| 7   | effect    | A Stone Is Found (copy 3 of N)                            | —        | TODO                                                  | — |
+| 8   | effect    | What Did It Cost? (copy 1 of N)                           | —        | TODO                                                  | — |
+| 9   | effect    | What Did It Cost? (copy 2 of N)                           | —        | TODO                                                  | — |
+| 10  | effect    | What Did It Cost? (copy 3 of N)                           | —        | TODO                                                  | — |
+| 11  | event     | Sacrifices Must Be Made                                   | —        | TODO (event subsystem pending Q17)                    | — |
+
+The 6 Effects total split between "A Stone Is Found" and "What Did It Cost?";
+the exact copy count of each is TBD. Update the per-card `type` (`hero` /
+`fateEffect`), `strength`, and `effects[]` in `villains/thanos/fateDeck.ts`
+once you transcribe.
+
+## Common Fate deck (15 cards) — pending RULES_QUESTIONS Q15
+
+Per the rulebook the Common Fate deck (shuffled into the shared Fate deck
+alongside every villain's Fate deck) holds 11 Heroes + 4 Events. Engine file
+will be added at `engine/villains/common/fateDeck.ts` once transcribed.
 
 ## Other villains (Hela, Killmonger, Taskmaster, Ultron)
 

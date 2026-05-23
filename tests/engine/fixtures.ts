@@ -54,8 +54,6 @@ export function makePlayer(
     hand: [],
     deck: [],
     discard: [],
-    fateDeck: [],
-    fateDiscard: [],
     realm: makeRealm(villain),
     flags: {},
     objectiveProgress: { completed: false, steps: {} },
@@ -84,6 +82,8 @@ export function makeGame(overrides: Partial<GameState> = {}): GameState {
     pendingTriggers: [],
     usedIcons: [],
     instanceCounter: 0,
+    fateDeck: [],
+    fateDiscard: [],
     ...overrides,
   };
 }

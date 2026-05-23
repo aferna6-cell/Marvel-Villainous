@@ -14,6 +14,8 @@ export function TurnControls(): JSX.Element {
   const canEndTurn =
     state.phase === 'actions' || state.phase === 'fate' || state.phase === 'end';
   const canStartTurn = state.phase === 'start';
+  const canFate = state.phase === 'actions' && state.pendingPrompt === null;
+  const opponents = state.playerOrder.filter((id) => id !== state.activePlayer);
 
   const tryDispatch = (fn: () => void): void => {
     try {
@@ -55,6 +57,19 @@ export function TurnControls(): JSX.Element {
         >
           End move phase
         </button>
+        {opponents.map((opp) => (
+          <button
+            key={`fate-${opp}`}
+            className="button"
+            disabled={!canFate}
+            onClick={() =>
+              tryDispatch(() => engine.dispatch({ kind: 'fateOpponent', opponent: opp }))
+            }
+            title={`Reveal one card from the shared Fate deck and play it against ${opp}.`}
+          >
+            Fate {opp}
+          </button>
+        ))}
         <button
           className="button"
           disabled={!canEndTurn}

@@ -6,6 +6,7 @@ import { Board } from '../ui/components/Board';
 import { Hand } from '../ui/components/Hand';
 import { TurnControls } from '../ui/components/TurnControls';
 import { Log } from '../ui/components/Log';
+import { FatePanel } from '../ui/components/FatePanel';
 
 function MainMenu(): JSX.Element {
   return (
@@ -22,15 +23,22 @@ function MainMenu(): JSX.Element {
 function VillainPicker(): JSX.Element {
   const { setEngine } = useEngineCtx();
   const navigate = useNavigate();
-  const startThanos = (): void => {
+  const startSolo = (): void => {
     setEngine(createGameEngine(newGame({ villains: ['thanos'], seed: 1 })));
+    navigate('/game');
+  };
+  const startThanosVsHela = (): void => {
+    setEngine(createGameEngine(newGame({ villains: ['thanos', 'hela'], seed: 1 })));
     navigate('/game');
   };
   return (
     <main className="screen screen--setup">
       <h2 className="title title--small">Choose your villain</h2>
-      <button className="button button--primary" onClick={startThanos}>
-        Thanos
+      <button className="button button--primary" onClick={startSolo}>
+        Solo · Thanos
+      </button>
+      <button className="button" onClick={startThanosVsHela}>
+        2-Player · Thanos vs Hela (Fate testing)
       </button>
       <p className="hint">
         Other villains arrive in later chunks. Card and board data are stubs
@@ -63,6 +71,7 @@ function GameScreen(): JSX.Element {
       <Board />
       <TurnControls />
       <Hand />
+      <FatePanel />
       <Log />
     </main>
   );

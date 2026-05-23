@@ -2,9 +2,9 @@
 //
 // `view(state, asPlayer)` returns a `PlayerView` containing only what that
 // player could legally see at the physical table: their own hand, every
-// face-up zone on every realm, and the *contents* of all discard piles —
-// but never another player's hand, and never the *order* of any deck or fate
-// deck (only the counts).
+// face-up zone on every realm, the *contents* of all discard piles, and the
+// shared Fate deck's discard pile — but never another player's hand, and
+// never the *order* of any deck (only the counts).
 //
 // The AI move advisor (§8) consumes ONLY a `PlayerView`, never the raw
 // `GameState`. Routing it through this projection is what guarantees it
@@ -30,7 +30,6 @@ export interface PlayerPublicView {
   power: number;
   /** Discard contents are public; order is irrelevant. */
   discard: CardId[];
-  fateDiscard: CardId[];
   /** All cards in a realm are face-up. */
   realm: Realm;
   /** Villain-specific public state (tokens on the board, etc.). */
@@ -38,8 +37,6 @@ export interface PlayerPublicView {
   objectiveProgress: ObjectiveProgress;
   /** Draw-pile size only — the order is hidden. */
   deckCount: number;
-  /** Fate-deck size only — the order is hidden. */
-  fateDeckCount: number;
 }
 
 /** The viewing player sees their own hand. */
@@ -54,6 +51,15 @@ export interface OpponentView extends PlayerPublicView {
   handCount: number;
 }
 
+/**
+ * The single shared Fate deck (rulebook Setup §3). Order is hidden — only the
+ * count is exposed — but the discard pile contents are face-up and public.
+ */
+export interface SharedFateView {
+  deckCount: number;
+  discard: CardId[];
+}
+
 /** The whole game as one player legally sees it. */
 export interface PlayerView {
   asPlayer: PlayerId;
@@ -66,6 +72,7 @@ export interface PlayerView {
   log: LogEntry[];
   self: SelfView;
   opponents: OpponentView[];
+  fate: SharedFateView;
 }
 
 function publicView(p: PlayerState): PlayerPublicView {
@@ -74,12 +81,10 @@ function publicView(p: PlayerState): PlayerPublicView {
     villain: p.villain,
     power: p.power,
     discard: structuredClone(p.discard),
-    fateDiscard: structuredClone(p.fateDiscard),
     realm: structuredClone(p.realm),
     flags: structuredClone(p.flags),
     objectiveProgress: structuredClone(p.objectiveProgress),
     deckCount: p.deck.length,
-    fateDeckCount: p.fateDeck.length,
   };
 }
 
@@ -117,5 +122,9 @@ export function view(state: GameState, asPlayer: PlayerId): PlayerView {
     log: structuredClone(state.log),
     self,
     opponents,
+    fate: {
+      deckCount: state.fateDeck.length,
+      discard: structuredClone(state.fateDiscard),
+    },
   };
 }

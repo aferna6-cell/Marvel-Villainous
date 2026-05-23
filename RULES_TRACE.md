@@ -18,8 +18,11 @@ below cite the booklet's printed pagination as parsed from the PDF.
 | Default end-of-turn hand size                  | 4                                    | `engine/util.ts` — `DEFAULT_HAND_SIZE`          | Discard Cards: "draw back up to four cards" |
 | Per-seat starting Power                        | 1st: 0, 2nd: 1, 3rd: 2, 4th: 2       | `engine/setup.ts` — `startingPower`             | Setup §6                         |
 | Each villain deck size                         | 30 cards                             | _PLACEHOLDER (stubbed at 8) — pending Q14_      | Components: "5 Villain Decks (30 cards in each)" |
-| Fate action: reveal / play / discard           | reveal 2, play 1, discard 1          | `engine/actions/fate.ts` — `FATE_REVEAL_COUNT`  | Fate Action                      |
-| Starting hand                                  | 4 cards                              | `engine/setup.ts` — `STARTING_HAND_SIZE`        | Setup §6                         |
+| Fate action: reveal                             | reveal **1** card from the shared deck | `engine/actions/fate.ts` — `FATE_REVEAL_COUNT`  | Fate Action: "Reveal **one** card from the top of the Fate deck" |
+| Fate deck structure                             | single shared deck (Common + all villains' Fate decks shuffled together) | `engine/types.ts` — `GameState.fateDeck` / `fateDiscard` | Setup §3: "Shuffle together the Common Fate deck and the Fate decks from all Villains playing this game to create a single Fate deck" |
+| Each villain Fate deck size                     | 11 cards                             | `engine/villains/thanos/fateDeck.ts` (11-row stub) | Components: "5 Villain Fate decks with 11 cards each" |
+| Common Fate deck size                           | 15 cards (pending real card data)    | _PLACEHOLDER — see Q15_                          | Components: "1 Common Fate deck with 15 cards" |
+| Starting hand                                  | 4 cards                              | `engine/setup.ts` — `STARTING_HAND_SIZE`        | Setup §6: "Draw a starting hand of four cards" |
 
 ## Legality rules enforced by `engine/validate.ts`
 
@@ -55,7 +58,7 @@ below cite the booklet's printed pagination as parsed from the PDF.
 | Start of turn resets `mustMoveDifferent` to `true`      | `engine/phases/startOfTurn.ts` — `applyStartTurn` | Move Your Villain                |
 | Move + Actions are player-driven (no auto-advance)      | `engine/phases/mainPhase.ts` — `canAdvance` false | On Your Turn                     |
 | Movement override: card effects may flip the flag       | `engine/types.ts` — `PlayerState.mustMoveDifferent`| (card-driven exceptions)        |
-| Fate reveals 2, plays 1, discards 1                     | `engine/actions/fate.ts` + `resolveFatePlay`     | Fate Action                      |
+| Fate reveals exactly **1** card (rulebook divergence from the plan) | `engine/actions/fate.ts` — `FATE_REVEAL_COUNT = 1` | Fate Action: "Reveal one card from the top of the Fate deck" |
 | Fate phase exits to End phase once the prompt resolves  | `engine/phases/fatePhase.ts` — `runAutomatic`     | On Your Turn                     |
 | End of turn draws back up to the player's hand size     | `engine/phases/endOfTurn.ts` — `runAutomatic`     | On Your Turn (end)               |
 | Per-player hand size override                           | `engine/types.ts` — `PlayerState.handSize`        | (villain-specific exceptions)    |
@@ -74,12 +77,26 @@ below cite the booklet's printed pagination as parsed from the PDF.
 | Per-villain realm factory wired to setup         | `villains/index.ts` — `villains[v].makeRealm` |                                  |
 | Thanos-only New Game from the menu                | `app/routes.tsx` — `VillainPicker`            |                                  |
 
+## Fate (CHUNK 6 — M3)
+
+| Rule                                            | Code location                          | Rulebook citation               |
+| ------------------------------------------------ | ---------------------------------------- | -------------------------------- |
+| Fate action reveals 1 card from the shared deck  | `engine/actions/fate.ts` — `applyFate`   | Fate Action                      |
+| Fate target is chosen by the active player       | `engine/actions/fate.ts` — `applyFate`   | Fate Action: "choose which player to target" |
+| Cannot Fate yourself                             | `engine/validate.ts` — `fateOpponent` case | Fate Action (implicit: target an *opponent*) |
+| Unplayable Fate cards are discarded with no effect | `engine/cards/effects.ts` — `resolveFatePlay` skip branch | Fate Action: "If you draw a Fate card and cannot play it for whatever reason, discard it with no effect" |
+| Heroes from Fate land on the targeted opponent's realm | `engine/cards/effects.ts` — `resolveFatePlay` | Fate Cards section |
+| Heroes cover bottom-row icons (rulebook: top of Domain) | `engine/validate.ts` — `useIcon` case   | Blocking Actions                 |
+| Hero defeat sends the card to the SHARED Fate discard | `engine/actions/defeat.ts` — `defeatHero` | Vanquish + Setup §3              |
+| Empty Fate deck reshuffles from the Fate discard | `engine/actions/fate.ts` — `applyFate`   | (deck-exhaust convention)        |
+| Fate is triggered only via the Fate icon (no alternate trigger e.g. pay-to-Fate) | `engine/validate.ts` — `fateOpponent` case | Types of Actions — no alternate path listed |
+
 ## Engine mechanics
 
 | Rule                                            | Code location                          | Rulebook citation               |
 | ------------------------------------------------ | ---------------------------------------- | -------------------------------- |
-| Empty draw pile reshuffles the discard pile      | `engine/cards/effects.ts` — `reshuffleDeck` | (deck-exhaust convention)       |
-| Empty Fate deck reshuffles the Fate discard      | `engine/actions/fate.ts` — `applyFate`   | (deck-exhaust convention)        |
+| Empty Villain deck reshuffles its discard pile   | `engine/cards/effects.ts` — `reshuffleDeck` | Draw Cards: "If you need to draw from your Villain deck when it is empty, shuffle your Villain discard pile to form a new deck" |
+| Empty Fate deck reshuffles the Fate discard      | `engine/actions/fate.ts` — `applyFate`   | (deck-exhaust convention; parallel rule) |
 | A pending prompt halts the auto-advance loop     | `engine/state.ts` — `autoAdvance`         |                                  |
 
 ## Not yet enforced (pending later milestones)

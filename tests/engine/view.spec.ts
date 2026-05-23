@@ -38,8 +38,6 @@ function makePlayer(id: PlayerId, villain: VillainKey): PlayerState {
     hand: [`${id}-hand-secret`],
     deck: [`${id}-deck-secret`, `${id}-deck-secret-2`],
     discard: [`${id}-discard-public`],
-    fateDeck: [`${id}-fate-secret`],
-    fateDiscard: [`${id}-fatediscard-public`],
     realm: makeRealm(villain),
     flags: { sampleCounter: 2, sampleList: ['a', 'b'] },
     objectiveProgress: { completed: false, steps: { stones: 0 } },
@@ -67,6 +65,9 @@ function makeState(): GameState {
     pendingTriggers: [],
     usedIcons: [],
     instanceCounter: 0,
+    // Single shared Fate deck (rulebook Setup §3).
+    fateDeck: ['fate-deck-secret-1', 'fate-deck-secret-2'],
+    fateDiscard: ['fate-discard-public'],
   };
 }
 
@@ -93,41 +94,40 @@ describe('view()', () => {
     expect(opp).not.toHaveProperty('hand');
   });
 
-  it('hides deck and fate-deck order everywhere, exposing only counts', () => {
+  it('hides per-player deck order and the shared Fate-deck order, exposing only counts', () => {
     const v = view(makeState(), 'p1');
-    // Own decks: counts only, no ordered arrays.
+    // Per-player villain decks: counts only, no ordered arrays.
     expect(v.self).not.toHaveProperty('deck');
-    expect(v.self).not.toHaveProperty('fateDeck');
     expect(v.self.deckCount).toBe(2);
-    expect(v.self.fateDeckCount).toBe(1);
-    // Opponent decks: counts only.
     const [opp] = v.opponents;
     expect(opp).not.toHaveProperty('deck');
-    expect(opp).not.toHaveProperty('fateDeck');
     expect(opp?.deckCount).toBe(2);
-    expect(opp?.fateDeckCount).toBe(1);
+    // Shared Fate deck (rulebook Setup §3): one count for the whole game.
+    expect(v.fate.deckCount).toBe(2);
+    // Per-player fields no longer expose a fate deck.
+    expect(v.self).not.toHaveProperty('fateDeck');
+    expect(v.self).not.toHaveProperty('fateDeckCount');
   });
 
   it('provably leaks no hidden card identity into the serialized view', () => {
     const serialized = JSON.stringify(view(makeState(), 'p1'));
-    // Opponent's hand, and every deck/fate-deck card, must be absent.
+    // Opponent's hand and every deck card (own and shared) must be absent.
     expect(serialized).not.toContain('p2-hand-secret');
     expect(serialized).not.toContain('p1-deck-secret');
     expect(serialized).not.toContain('p2-deck-secret');
-    expect(serialized).not.toContain('p1-fate-secret');
-    expect(serialized).not.toContain('p2-fate-secret');
+    expect(serialized).not.toContain('fate-deck-secret');
     // Public information that SHOULD survive the projection.
     expect(serialized).toContain('p1-hand-secret'); // own hand
     expect(serialized).toContain('p1-discard-public'); // own discard
-    expect(serialized).toContain('p1-fatediscard-public'); // own fate discard
     expect(serialized).toContain('p2-discard-public'); // opponent discard is face-up
+    expect(serialized).toContain('fate-discard-public'); // shared Fate discard is face-up
   });
 
   it('keeps discard pile contents visible (they are face-up at the table)', () => {
     const v = view(makeState(), 'p1');
     const [opp] = v.opponents;
     expect(opp?.discard).toEqual(['p2-discard-public']);
-    expect(opp?.fateDiscard).toEqual(['p2-fatediscard-public']);
+    expect(v.fate.discard).toEqual(['fate-discard-public']);
   });
 
   it('does not share mutable references with the source state', () => {

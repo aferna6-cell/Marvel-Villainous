@@ -91,14 +91,14 @@ Fating an opponent forfeits any remaining Actions for the turn.
 **Current code:** Fate transitions to the `'fate'` phase; once the Fate prompt
 resolves, the phase machine advances to `'end'` (no return to actions).
 
-### Q11 — Coupling of `fateOpponent` to a Fate icon
+### Q11 — Coupling of `fateOpponent` to a Fate icon (PARTIAL)
 
-The plan §3 step 4 says the Fate phase is entered "only if `gainPower 2` was
-traded for it via the `Fate` icon, OR the villain's icon row contains a `fate`
-symbol and they activate it." Does dispatching `fateOpponent` require a
-matching Fate icon spent at the current location, or may a player Fate freely?
-**Current code:** `fateOpponent` is independently legal during the Actions or
-Fate phase; no icon prerequisite. Related to Q2.
+Rulebook confirms Fate is invoked via a Fate icon — there is NO alternate
+"pay Power to Fate without an icon" path. What remains unresolved is whether
+the engine should require the icon to actually be spent before
+`fateOpponent` is legal (related to Q2).
+**Current code:** `fateOpponent` is independently legal during the Actions
+phase; no icon prerequisite enforced (icons are tracked separately).
 
 ## Open questions (raised in CHUNK 5 — Thanos)
 
@@ -147,3 +147,58 @@ card)? For each card the engine needs:
 entries (`thanos-stub-ally-N`, etc.) with placeholder `cost` and `strength`.
 A full per-card transcription pass replaces them all — see
 `assets/CONTENT_TODO.md` for the worksheet.
+
+## Open questions (raised in CHUNK 6 — Fate)
+
+### Q15 — Common Fate deck (15 cards) composition
+
+The rulebook specifies a single shared Fate deck made by shuffling the
+**Common Fate deck (15 cards)** together with every participating villain's
+Fate deck. Per the wiki those 15 cards are 11 Heroes (Iron Man, Black Widow,
+Nick Fury, Hulk, Falcon, Hawkeye, She-Hulk, Vision, Thor, Captain Marvel,
+Captain America) and 4 Events (Protected Vibranium, Lockdown at the Raft,
+Helicarrier Alert, Avengers Assemble). For each I need the mechanical
+metadata: hero strength, event effect codes, which icons (if any) a hero
+covers, and per-card placement target (location index or "owner's choice").
+
+**Current code:** the Common Fate deck is not represented in `setup.ts` —
+the shared `state.fateDeck` only holds the participating villains' Fate
+decks. Stub `engine/villains/common/fateDeck.ts` will land alongside the
+transcription.
+
+### Q16 — Fate decision order (PLAN DIVERGENCE)
+
+The rulebook reads: "Reveal one card from the top of the Fate deck, **then**
+choose which player to target." The engine currently has the player choose
+the target **first** (via `fateOpponent { opponent }`), then reveals the
+card. Mechanically equivalent in the common case (the active player can
+always retarget by choosing a different opponent the next turn), but the
+information ordering differs: the rulebook lets the player see the card
+before committing to the target.
+
+**Current code:** target-then-reveal; a 2-step prompt (reveal-then-target)
+is a follow-up refactor.
+
+### Q17 — Event card type
+
+Rulebook: "Events are placed at the center of the playing area as a new and
+unique location. Events are not considered to be in any Domain." Marvel
+Villainous Events are a genuinely separate card type with global state
+(only one Global Event in play at a time). The engine's current `CardType`
+union does not include `'event'` — Thanos's targeted event "Sacrifices
+Must Be Made" is filed as `'fateEffect'` until the Event subsystem lands.
+
+**Current code:** Events stubbed as `'fateEffect'` in
+`engine/villains/thanos/fateDeck.ts`.
+
+### Q18 — Targeted vs Global Fate cards
+
+The rulebook distinguishes Targeted Fate cards (those bearing a specific
+villain icon — preferred target, but the active player MAY choose another;
+Targeted *Events*, however, MUST be played on the indicated villain) from
+Global Events (played to the center play area regardless of which player
+revealed them). The engine has no concept of a card's "targeted villain"
+metadata.
+
+**Current code:** the active player picks any opponent; targeting
+constraints are not enforced.
