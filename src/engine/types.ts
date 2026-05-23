@@ -48,7 +48,11 @@ export type ActionIcon =
  */
 export interface CardDef {
   id: CardId;
-  villain: VillainKey | `fate-${VillainKey}`;
+  /**
+   * Which deck this card belongs to: a villain's own deck, a villain-specific
+   * Fate deck, or the shared Common Fate deck (rulebook Setup §3).
+   */
+  villain: VillainKey | `fate-${VillainKey}` | 'fate-common';
   name: string; // USER FILLS — left blank in repo
   type: CardType;
   cost: number; // power cost

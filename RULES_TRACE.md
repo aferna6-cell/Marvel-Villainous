@@ -74,7 +74,9 @@ below cite the booklet's printed pagination as parsed from the PDF.
 | Per-icon Power amount (1/2/3)                    | `engine/actions/useIcon.ts` — gainPower / gainPower2 / gainPower3 | Gain Power: "Collect Power... equal to the number in the icon" |
 | Thanos's starting Power (by seat)                | 0 / 1 / 2 / 2 (seat 1 / 2 / 3 / 4)            | Setup §6                         |
 | Thanos's starting hand size                      | 4                                             | Setup §6                         |
-| Thanos's deck size                               | _PLACEHOLDER (8 stub cards) — should be 30_    | Components                       |
+| Thanos's deck size                               | 30 cards (10 Allies + 16 Effects + 4 Items)   | `villains/thanos/deck.ts` — Components + per-card wiki infoboxes |
+| Thanos's Fate-deck composition                   | 11 cards (4 Heroes + 6 Effects + 1 Event)     | `villains/thanos/fateDeck.ts` — per-card wiki infoboxes |
+| Common Fate deck composition                     | 15 cards (11 Heroes + 4 Events)               | `villains/common/fateDeck.ts` — per-card wiki infoboxes |
 | Per-villain realm factory wired to setup         | `villains/index.ts` — `villains[v].makeRealm` |                                  |
 | Thanos-only New Game from the menu                | `app/routes.tsx` — `VillainPicker`            |                                  |
 

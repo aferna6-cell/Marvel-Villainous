@@ -12,6 +12,7 @@ import { shuffle } from './rng';
 import { clearRegistry, registerCards } from './cards/registry';
 import { autoAdvance } from './state';
 import { villains as villainData } from './villains/index';
+import { commonFateDeck } from './villains/common/fateDeck';
 import type {
   CardDef,
   GameState,
@@ -96,9 +97,10 @@ export function newGame(opts: NewGameOpts): GameState {
     throw new Error(`newGame: expected 1-4 villains, got ${opts.villains.length}`);
   }
 
-  // Register every card def for every villain in the game.
+  // Register every card def for every villain in the game, plus the
+  // shared Common Fate deck (rulebook Setup §3).
   clearRegistry();
-  const allCards: CardDef[] = [];
+  const allCards: CardDef[] = [...commonFateDeck];
   for (const v of opts.villains) {
     allCards.push(...villainData[v].deck, ...villainData[v].fateDeck);
   }
@@ -137,10 +139,9 @@ export function newGame(opts: NewGameOpts): GameState {
   if (!first) throw new Error('newGame: no seated players');
 
   // Build the single shared Fate deck — rulebook Setup §3: shuffle the
-  // Common Fate deck and every participating villain's Fate deck together.
-  // CHUNK 6: only the per-villain Fate cards are stubbed; the 15-card
-  // Common Fate deck is pending real card data (RULES_QUESTIONS Q15).
-  const sharedFateCards: string[] = [];
+  // Common Fate deck (15 cards) and every participating villain's Fate deck
+  // (11 cards each) together to create a single deck.
+  const sharedFateCards: string[] = commonFateDeck.map((c) => c.id);
   for (const v of opts.villains) {
     sharedFateCards.push(...villainData[v].fateDeck.map((c) => c.id));
   }

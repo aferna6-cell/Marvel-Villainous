@@ -137,43 +137,47 @@ From the rulebook setup:
    each deck)"). Currently stubbed at 8 in `villains/thanos/deck.ts`.
 4. No Thanos-specific movement exception confirmed.
 
-### Q14 — Thanos's villain deck composition
+### Q14 — Thanos's villain deck composition (RESOLVED)
 
-What are the mechanical metadata for every card in Thanos's deck (one row per
-card)? For each card the engine needs:
-- `type` (`ally` / `item` / `effect` / `condition`)
-- `cost` (Power cost to play)
-- `strength` (for allies; integer)
-- `effects[]` (mapped to the §2.3 `EffectSpec` primitives — gainPower,
-  drawCards, discardSelf, moveAlly, boostStrength, defeatHero, moveHero,
-  lookAtFate, searchDeck, forceDiscard, placeToken, or `villainSpecific`
-  with a key the assistant adds to `villains/thanos/specific.ts`)
-- `tags[]` (e.g. `'blackOrder'` — anything other cards filter on)
-- `icons[]` (for heroes only — which icons the hero covers; per Q3 this is
-  currently treated as the whole bottom row)
+All 30 cards transcribed from the Marvel Villainous Wiki via a Playwright
+scrape (using full Chromium under Xvfb to pass Cloudflare). See
+`engine/villains/thanos/deck.ts`:
 
-**Current code:** `engine/villains/thanos/deck.ts` ships 8 generic stub
-entries (`thanos-stub-ally-N`, etc.) with placeholder `cost` and `strength`.
-A full per-card transcription pass replaces them all — see
-`assets/CONTENT_TODO.md` for the worksheet.
+* 10 Allies — The Legions of Thanos ×5; Black Dwarf, Black Swan, Corvus
+  Glaive, Ebony Maw, Proxima Midnight (each ×1)
+* 16 Effects — Consult the Well ×4; A Small Price to Pay, Taste of Cosmic
+  Power (each ×3); Deliver Judgment, The Mad Titan, Warp Reality (each ×2)
+* 4 Items — Death's Favor ×3; Space Throne ×1
+
+Costs and strengths are encoded; the ability-text mechanics that don't map
+cleanly to a §2.3 primitive are stubbed as `villainSpecific` entries (Mad
+Titan), or as empty `effects[]` placeholders pending CHUNK 7+ behavior
+wiring.
 
 ## Open questions (raised in CHUNK 6 — Fate)
 
-### Q15 — Common Fate deck (15 cards) composition
+### Q15 — Common Fate deck (15 cards) composition (RESOLVED)
 
-The rulebook specifies a single shared Fate deck made by shuffling the
-**Common Fate deck (15 cards)** together with every participating villain's
-Fate deck. Per the wiki those 15 cards are 11 Heroes (Iron Man, Black Widow,
-Nick Fury, Hulk, Falcon, Hawkeye, She-Hulk, Vision, Thor, Captain Marvel,
-Captain America) and 4 Events (Protected Vibranium, Lockdown at the Raft,
-Helicarrier Alert, Avengers Assemble). For each I need the mechanical
-metadata: hero strength, event effect codes, which icons (if any) a hero
-covers, and per-card placement target (location index or "owner's choice").
+All 15 cards transcribed via the same Playwright scrape. See
+`engine/villains/common/fateDeck.ts`:
 
-**Current code:** the Common Fate deck is not represented in `setup.ts` —
-the shared `state.fateDeck` only holds the participating villains' Fate
-decks. Stub `engine/villains/common/fateDeck.ts` will land alongside the
-transcription.
+* 11 Heroes — Iron Man (str 3); Black Widow (2); Nick Fury (2); Hulk (5);
+  Falcon (2); Hawkeye (2); She-Hulk (4); Vision (4); Thor (5); Captain
+  Marvel (6); Captain America (3)
+* 4 Events — Avengers Assemble (str 10); Lockdown at the Raft (8);
+  Helicarrier Alert (6); Protected Vibranium (8)
+
+`setup.ts` now merges the Common Fate deck with every participating
+villain's Fate deck into the shared `state.fateDeck`. The Event subsystem
+(Q17) routes drawn Events to `state.globalEvent`.
+
+### Q19 — Dynamic-cost cards
+
+The Mad Titan's printed cost is "?" (the actual Power cost equals the
+Strength of the defeated target character). The engine's `cost: number`
+field can't express this directly; the card is encoded with `cost: 0` plus
+a `villainSpecific` effect (`thanos.madTitan`) that will collect the
+deferred cost when the handler lands in CHUNK 7+.
 
 ### Q16 — Fate decision order (RESOLVED — CHUNK 6 follow-up)
 

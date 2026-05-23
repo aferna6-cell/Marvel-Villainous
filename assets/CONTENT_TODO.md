@@ -36,11 +36,16 @@ Pending Q13 in `RULES_QUESTIONS.md`.
 | Hand size (`handSize`)      | default = 4          | TODO           |
 | Deck size                   | stub deck of 8 cards | TODO           |
 
-## Thanos — villain deck (`engine/villains/thanos/deck.ts`)
+## Thanos — villain deck (`engine/villains/thanos/deck.ts`) — DONE
 
-Pending Q14 in `RULES_QUESTIONS.md`. The current stub holds 8 placeholder
-entries (`thanos-stub-ally-1` ... `thanos-stub-item-2`). When you transcribe,
-replace the stub array with one row per card from the printed deck:
+Fully transcribed from the Marvel Villainous Wiki (Q14 resolved). 30 cards:
+10 Allies + 16 Effects + 4 Items, all with `name: ''` per §0. Per-card
+ability text is NOT in the repo — when you want to look one up, search the
+card id (`thanos-mad-titan`, `thanos-corvus-glaive`, etc.) against your
+physical deck or the wiki.
+
+The original transcription worksheet is left below for reference, but no
+manual work remains for Thanos's villain deck.
 
 ```ts
 {
@@ -63,7 +68,12 @@ Per-card worksheet (fill one row per card in the printed deck):
 | --- | ---- | ---- | -------- | ---- | -------------------- |
 |     |      |      |          |      |                      |
 
-## Thanos — Fate deck (`engine/villains/thanos/fateDeck.ts`)
+## Thanos — Fate deck (`engine/villains/thanos/fateDeck.ts`) — DONE
+
+Fully transcribed from the wiki. 11 cards: 4 Heroes + 6 Effects + 1 Event,
+with `name: ''` per §0. The worksheet below is for reference only.
+
+
 
 11-card structure confirmed from the rulebook + components page:
 
@@ -86,11 +96,10 @@ the exact copy count of each is TBD. Update the per-card `type` (`hero` /
 `fateEffect`), `strength`, and `effects[]` in `villains/thanos/fateDeck.ts`
 once you transcribe.
 
-## Common Fate deck (15 cards) — pending RULES_QUESTIONS Q15
+## Common Fate deck — DONE
 
-Per the rulebook the Common Fate deck (shuffled into the shared Fate deck
-alongside every villain's Fate deck) holds 11 Heroes + 4 Events. Engine file
-will be added at `engine/villains/common/fateDeck.ts` once transcribed.
+Fully transcribed at `engine/villains/common/fateDeck.ts`. 15 cards:
+11 Heroes + 4 Events, with `name: ''` per §0. Q15 resolved.
 
 ## Other villains (Hela, Killmonger, Taskmaster, Ultron)
 
