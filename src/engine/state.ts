@@ -115,8 +115,8 @@ export function reduce(state: GameState, action: Action): GameState {
     case 'drawToHandSize':
       next = applyDraw(state, state.activePlayer);
       break;
-    case 'fateOpponent':
-      next = applyFate(state, action.opponent);
+    case 'fate':
+      next = applyFate(state);
       break;
     case 'resolvePrompt':
       next = applyResolvePrompt(state, action.choice);

@@ -11,7 +11,7 @@ describe('Action union', () => {
       | 'attackHero'
       | 'discardCards'
       | 'drawToHandSize'
-      | 'fateOpponent'
+      | 'fate'
       | 'resolvePrompt'
       | 'endTurn'
     >();
@@ -49,8 +49,8 @@ describe('Action union', () => {
           return a.cardIds.join(',');
         case 'drawToHandSize':
           return a.kind;
-        case 'fateOpponent':
-          return a.opponent;
+        case 'fate':
+          return a.kind;
         case 'resolvePrompt':
           return a.choice.kind;
         case 'endTurn':

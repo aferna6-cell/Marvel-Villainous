@@ -70,7 +70,8 @@ below cite the booklet's printed pagination as parsed from the PDF.
 | ------------------------------------------------ | --------------------------------------------- | -------------------------------- |
 | Thanos's 4 locations exist on the realm          | `villains/thanos/realm.ts` — `thanosRealm`    | Components                       |
 | Confirmed location identifiers                   | Sanctuary II, Titan, The Infinity Well, Knowhere — encoded as ids | Components (board image) |
-| Per-location icon set on Thanos's board          | _PLACEHOLDER — partial info — see Q12_        | Components (board image)         |
+| Per-location icon set on Thanos's board          | `villains/thanos/realm.ts` — `THANOS_LOCATION_ICONS` (Sanctuary II + Titan confirmed; Infinity Well + Knowhere best-effort, see Q12) | Components (board image) |
+| Per-icon Power amount (1/2/3)                    | `engine/actions/useIcon.ts` — gainPower / gainPower2 / gainPower3 | Gain Power: "Collect Power... equal to the number in the icon" |
 | Thanos's starting Power (by seat)                | 0 / 1 / 2 / 2 (seat 1 / 2 / 3 / 4)            | Setup §6                         |
 | Thanos's starting hand size                      | 4                                             | Setup §6                         |
 | Thanos's deck size                               | _PLACEHOLDER (8 stub cards) — should be 30_    | Components                       |
@@ -82,7 +83,10 @@ below cite the booklet's printed pagination as parsed from the PDF.
 | Rule                                            | Code location                          | Rulebook citation               |
 | ------------------------------------------------ | ---------------------------------------- | -------------------------------- |
 | Fate action reveals 1 card from the shared deck  | `engine/actions/fate.ts` — `applyFate`   | Fate Action                      |
-| Fate target is chosen by the active player       | `engine/actions/fate.ts` — `applyFate`   | Fate Action: "choose which player to target" |
+| Fate target is chosen AFTER reveal               | `engine/actions/fate.ts` — `applyFate` + `resolveFatePlay` | Fate Action: "Reveal one card from the top of the Fate deck, **then** choose which player to target" |
+| Targeted Fate cards have NO placement constraint | (no validation) | Fate Cards: "it's your choice" to play a Targeted card on a different villain |
+| Events go to a single Global Event slot in the center play area | `engine/cards/effects.ts` — `resolveFatePlay` event branch | §I, §J: "Events are placed at the center of the playing area as a new and unique location" |
+| Only one Global Event in play at a time          | `engine/cards/effects.ts` — `resolveFatePlay` event branch | §I: "If a Global Event is in play and you draw a new one from the Fate deck, place the newly drawn Global Event on the discard pile" |
 | Cannot Fate yourself                             | `engine/validate.ts` — `fateOpponent` case | Fate Action (implicit: target an *opponent*) |
 | Unplayable Fate cards are discarded with no effect | `engine/cards/effects.ts` — `resolveFatePlay` skip branch | Fate Action: "If you draw a Fate card and cannot play it for whatever reason, discard it with no effect" |
 | Heroes from Fate land on the targeted opponent's realm | `engine/cards/effects.ts` — `resolveFatePlay` | Fate Cards section |

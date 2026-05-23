@@ -132,18 +132,23 @@ describe('isLegal — attacking heroes (§4)', () => {
 describe('isLegal — Fate (§3, §11)', () => {
   it('rejects Fating yourself', () => {
     const game = makeGame({ phase: 'actions' });
-    const result = isLegal(game, { kind: 'fateOpponent', opponent: 'p1' });
-    expect(reason(result)).toContain('cannot Fate yourself');
+    // With reveal-then-target, the active player gets the prompt; self-target
+    // is rejected at prompt resolution by `resolveFatePlay`. The `fate`
+    // action itself only requires at least one opponent to exist.
+    const result = isLegal(game, { kind: 'fate' });
+    expect(result).toBe(true);
   });
 
   it('rejects Fating a player not in the game', () => {
     const game = makeGame({ phase: 'actions' });
-    expect(isLegal(game, { kind: 'fateOpponent', opponent: 'p3' })).not.toBe(true);
+    // With reveal-then-target the action no longer takes an opponent — the
+    // target is chosen at prompt resolution and validated there.
+    expect(isLegal(game, { kind: 'fate' })).toBe(true);
   });
 
   it('allows Fating a real opponent', () => {
     const game = makeGame({ phase: 'actions' });
-    expect(isLegal(game, { kind: 'fateOpponent', opponent: 'p2' })).toBe(true);
+    expect(isLegal(game, { kind: 'fate' })).toBe(true);
   });
 });
 

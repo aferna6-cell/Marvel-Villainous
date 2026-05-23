@@ -104,18 +104,27 @@ phase; no icon prerequisite enforced (icons are tracked separately).
 
 Resolved-or-narrowed in CHUNK 5 follow-up via the Ravensburger rulebook PDF.
 
-### Q12 — Thanos's realm: per-location icons (PARTIAL — still blocked)
+### Q12 — Thanos's realm: per-location icons (PARTIAL — CHUNK 6 follow-up)
 
 Thanos's four locations from the rulebook are: **Sanctuary II, Titan, The
 Infinity Well, Knowhere** (encoded as location ids; `name` stays `''` in repo
-per §0). Partial info gathered from the Marvel Villainous Wiki: Sanctuary II's
-covered row includes Activate; Titan's covered row includes Fate; Knowhere's
-four icons are Relocate, Fate, Play a Card, Vanquish (covered row includes
-Relocate). The Infinity Well's icons are not yet confirmed.
+per §0). Icon layouts transcribed by inspecting the high-resolution
+components page of the rulebook PDF:
 
-**Still needed:** the exact top/bottom icon split for every location.
-**Current code:** `engine/villains/thanos/realm.ts` ships placeholder icons
-(`top: [gainPower, play]`, `bottom: [move, fate]`) per location.
+| # | Location | Top (uncovered)             | Bottom (Fate-side, covered)    | Confidence |
+| - | --------- | --------------------------- | ------------------------------- | ---------- |
+| 0 | Sanctuary II | `discard`, `move`        | `gainPower2`, `play`            | **read directly** |
+| 1 | Titan        | `gainPower`, `move`      | `discard`, `vanquish`           | **read directly** |
+| 2 | The Infinity Well | `play`, `gainPower3` | `discard`, `move`               | best-effort |
+| 3 | Knowhere     | `vanquish`, `discard`, `move` | `move`                     | best-effort (1+3 split) |
+
+The `gainPower` icon variants (`gainPower2`, `gainPower3`) were added to the
+`ActionIcon` union in CHUNK 6 follow-up to encode the per-icon Power amount
+printed inside each coin.
+
+**Still needed:** physical-board confirmation of Infinity Well and Knowhere
+layouts. Confirmation that Knowhere's icons are genuinely a 1+3 split rather
+than a 2+2 arrangement I misread.
 
 ### Q13 — Thanos's starting numbers (RESOLVED)
 
@@ -166,39 +175,34 @@ the shared `state.fateDeck` only holds the participating villains' Fate
 decks. Stub `engine/villains/common/fateDeck.ts` will land alongside the
 transcription.
 
-### Q16 — Fate decision order (PLAN DIVERGENCE)
+### Q16 — Fate decision order (RESOLVED — CHUNK 6 follow-up)
 
-The rulebook reads: "Reveal one card from the top of the Fate deck, **then**
-choose which player to target." The engine currently has the player choose
-the target **first** (via `fateOpponent { opponent }`), then reveals the
-card. Mechanically equivalent in the common case (the active player can
-always retarget by choosing a different opponent the next turn), but the
-information ordering differs: the rulebook lets the player see the card
-before committing to the target.
+Refactored to match the rulebook: reveal-1, then choose target. The `Action`
+union dropped `fateOpponent { opponent }` in favour of `fate` (no args). The
+resolution prompt's choices list one `{ kind: 'target', target: { kind:
+'player', player } }` entry per eligible opponent plus a `skip` choice. The
+target is validated at resolution time (`resolveFatePlay` in
+`engine/cards/effects.ts`).
 
-**Current code:** target-then-reveal; a 2-step prompt (reveal-then-target)
-is a follow-up refactor.
+### Q17 — Event card type (RESOLVED — CHUNK 6 follow-up)
 
-### Q17 — Event card type
+Added `'event'` to `CardType`. `GameState` gained a `globalEvent: InPlayCard
+| null` slot for the center play area; `resolveFatePlay` routes an event
+card there, and a second Event drawn while one is in play is discarded per
+rulebook §I. The Event subsystem is now structurally in place; the
+full-blown "play Allies to an Event," activated abilities, and resolution
+rules are CHUNK 7+ work as Event cards land in real card data.
 
-Rulebook: "Events are placed at the center of the playing area as a new and
-unique location. Events are not considered to be in any Domain." Marvel
-Villainous Events are a genuinely separate card type with global state
-(only one Global Event in play at a time). The engine's current `CardType`
-union does not include `'event'` — Thanos's targeted event "Sacrifices
-Must Be Made" is filed as `'fateEffect'` until the Event subsystem lands.
+### Q18 — Targeted vs Global Fate cards (CLARIFIED)
 
-**Current code:** Events stubbed as `'fateEffect'` in
-`engine/villains/thanos/fateDeck.ts`.
+Confirmed: there are NO targeting constraints on Targeted Fate cards. The
+villain icon on a Targeted card is informational — that villain is "more
+affected" by it but the active player may still play it on any opponent
+(rulebook: "some situations may lead you to target a Villain other than the
+one indicated on the Fate card; it's your choice"). The lone exception is
+Targeted Events, which MUST be played on the indicated villain — that
+constraint will land when the Event subsystem grows into card data.
 
-### Q18 — Targeted vs Global Fate cards
-
-The rulebook distinguishes Targeted Fate cards (those bearing a specific
-villain icon — preferred target, but the active player MAY choose another;
-Targeted *Events*, however, MUST be played on the indicated villain) from
-Global Events (played to the center play area regardless of which player
-revealed them). The engine has no concept of a card's "targeted villain"
-metadata.
-
-**Current code:** the active player picks any opponent; targeting
-constraints are not enforced.
+**Current code:** any opponent is eligible to receive any Fate card.
+Targeted-Event placement constraint is open until Event-card metadata adds
+a `targetedVillain` field.

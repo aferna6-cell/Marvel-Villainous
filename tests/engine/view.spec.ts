@@ -68,6 +68,7 @@ function makeState(): GameState {
     // Single shared Fate deck (rulebook Setup §3).
     fateDeck: ['fate-deck-secret-1', 'fate-deck-secret-2'],
     fateDiscard: ['fate-discard-public'],
+    globalEvent: null,
   };
 }
 

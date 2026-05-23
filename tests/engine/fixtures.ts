@@ -84,6 +84,7 @@ export function makeGame(overrides: Partial<GameState> = {}): GameState {
     instanceCounter: 0,
     fateDeck: [],
     fateDiscard: [],
+    globalEvent: null,
     ...overrides,
   };
 }

@@ -54,16 +54,16 @@ describe('mustMoveDifferent flag', () => {
 });
 
 describe('Fate phase', () => {
-  it('fateOpponent enters the fate phase and parks a fatePlay continuation', () => {
+  it('the fate action enters the fate phase and parks a fatePlay continuation', () => {
     registerCards([
       makeCard({ id: 'fc1', villain: 'fate-hela', type: 'hero', strength: 2 }),
     ]);
     // Single shared Fate deck (rulebook Setup §3).
     const game = makeGame({ phase: 'actions', fateDeck: ['fc1'] });
-    const next = reduce(game, { kind: 'fateOpponent', opponent: 'p2' });
+    const next = reduce(game, { kind: 'fate' });
     expect(next.phase).toBe('fate');
     expect(next.pendingPrompt?.continuation?.kind).toBe('fatePlay');
-    // Rulebook: reveal ONE card. The choice is "play it" or "discard with no effect".
+    // Rulebook reveal-then-target: 1 choice per eligible opponent + skip.
     expect(next.pendingPrompt?.choices).toHaveLength(2);
   });
 
@@ -73,10 +73,10 @@ describe('Fate phase', () => {
     ]);
     const game = makeGame({ phase: 'actions', fateDeck: ['fc1'] });
     game.players.p1.deck = ['p1-d1', 'p1-d2', 'p1-d3'];
-    const fated = reduce(game, { kind: 'fateOpponent', opponent: 'p2' });
+    const fated = reduce(game, { kind: 'fate' });
     const resolved = reduce(fated, {
       kind: 'resolvePrompt',
-      choice: { kind: 'card', cardId: 'fc1' },
+      choice: { kind: 'target', target: { kind: 'player', player: 'p2' } },
     });
     expect(resolved.pendingPrompt).toBeNull();
     expect(resolved.players.p2.realm.locations[0]?.heroesPresent).toHaveLength(1);

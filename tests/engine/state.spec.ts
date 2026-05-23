@@ -45,6 +45,7 @@ function makeState(): GameState {
     instanceCounter: 0,
     fateDeck: [],
     fateDiscard: [],
+    globalEvent: null,
   };
 }
 

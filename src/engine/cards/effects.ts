@@ -306,33 +306,34 @@ export function applyResolvePrompt(state: GameState, choice: PromptChoice): Game
 
 /**
  * Fate-prompt continuation (rulebook "Fate" action). The active player
- * revealed ONE card from the shared Fate deck. The choice is either:
- *  - `{ kind: 'card', cardId }` — play the revealed card on the fated opponent;
+ * revealed ONE card from the shared Fate deck and now chooses BOTH the target
+ * opponent AND whether to play the card — per the rulebook order "reveal,
+ * THEN choose which player to target." The choice is either:
+ *  - `{ kind: 'target', target: { kind: 'player', player } }` — play the
+ *     revealed card on the named opponent's realm;
  *  - `{ kind: 'skip' }` — discard with no effect (rulebook: "If you draw a
  *     Fate card and cannot play it for whatever reason, discard it with no
  *     effect.").
  *
- * Heroes / conditions are placed on the opponent's realm (CHUNK 6 default:
+ * Heroes / conditions land on the opponent's realm (CHUNK 6 default:
  * location 0 — pending RULES_QUESTIONS Q9 for per-card placement rules).
- * fateEffect cards resolve against the opponent and then go to the shared
- * Fate discard. The revealed card is always removed from the top of the
- * shared Fate deck.
+ * `fateEffect` cards resolve against the targeted opponent and go to the
+ * shared Fate discard. `event` cards go to the central play area as the
+ * Global Event (rulebook §I: only one Global Event in play at a time; if
+ * one is already in play, the newly drawn one goes to the discard).
  */
 function resolveFatePlay(
   state: GameState,
   continuation: Extract<PromptContinuation, { kind: 'fatePlay' }>,
   choice: PromptChoice,
 ): GameState {
-  if (choice.kind !== 'card' && choice.kind !== 'skip') {
-    throw new Error('resolveFatePlay: expected a card or skip choice');
+  if (choice.kind !== 'target' && choice.kind !== 'skip') {
+    throw new Error('resolveFatePlay: expected a target or skip choice');
   }
 
   let s = cloneState(state);
-  const opponent = s.players[continuation.opponent];
-  if (!opponent) throw new Error('resolveFatePlay: opponent missing');
 
-  // Remove the revealed cards from the top of the SHARED Fate deck (we peeked
-  // when fating; now we commit by removing them).
+  // Remove the revealed cards from the top of the SHARED Fate deck.
   for (const cardId of continuation.revealed) {
     const idx = s.fateDeck.indexOf(cardId);
     if (idx !== -1) s.fateDeck.splice(idx, 1);
@@ -340,8 +341,7 @@ function resolveFatePlay(
 
   s.pendingPrompt = null;
 
-  // Skip: rulebook lets the active player decline an unplayable Fate card.
-  // The revealed card goes straight to the shared Fate discard.
+  // Skip — rulebook escape clause.
   if (choice.kind === 'skip') {
     for (const cardId of continuation.revealed) s.fateDiscard.push(cardId);
     s.log.push({
@@ -352,26 +352,41 @@ function resolveFatePlay(
     return s;
   }
 
-  if (!continuation.revealed.includes(choice.cardId)) {
-    throw new Error('resolveFatePlay: chosen card was not among the revealed cards');
+  if (choice.target.kind !== 'player') {
+    throw new Error('resolveFatePlay: Fate target must be a player');
   }
-  const playedId = choice.cardId;
+  const targetId = choice.target.player;
+  if (targetId === state.activePlayer) {
+    // Rulebook: "You may not choose to use a Fate action to play cards into
+    // your own Domain."
+    throw new Error('resolveFatePlay: cannot Fate yourself');
+  }
+  if (!continuation.eligibleTargets.includes(targetId)) {
+    throw new Error('resolveFatePlay: chosen target was not offered by the prompt');
+  }
+
+  const opponent = s.players[targetId];
+  if (!opponent) throw new Error('resolveFatePlay: target opponent missing');
+
+  const [playedId] = continuation.revealed;
+  if (playedId === undefined) {
+    throw new Error('resolveFatePlay: nothing was revealed');
+  }
   s.log.push({
     turn: s.turn,
     player: state.activePlayer,
-    message: `Fate-played ${playedId} against ${continuation.opponent}`,
+    message: `Fate-played ${playedId} against ${targetId}`,
   });
 
   const def = getCard(playedId);
   if (!def) {
-    // Unknown card: dump it to the shared Fate discard so play can continue.
+    // Unknown card: dump to the shared Fate discard so play can continue.
     s.fateDiscard.push(playedId);
     return s;
   }
 
   if (def.type === 'hero' || def.type === 'condition') {
-    // CHUNK 6 placement default: location 0. Per-card placement target is
-    // RULES_QUESTIONS Q9.
+    // Placement defaults to location 0 — see RULES_QUESTIONS Q9.
     const loc = opponent.realm.locations[0];
     if (loc) {
       const inPlay = {
@@ -388,8 +403,36 @@ function resolveFatePlay(
   }
 
   if (def.type === 'fateEffect') {
-    s = applyEffects(s, def.effects, { player: continuation.opponent, sourceCardId: playedId });
+    s = applyEffects(s, def.effects, { player: targetId, sourceCardId: playedId });
     s.fateDiscard.push(playedId);
+    return s;
+  }
+
+  if (def.type === 'event') {
+    // Rulebook §I: a Global Event card goes to the center play area as a new
+    // and unique "location." Only one may be in play at a time — if one is
+    // already in play, the newly drawn one goes to the discard.
+    if (s.globalEvent !== null) {
+      s.fateDiscard.push(playedId);
+      s.log.push({
+        turn: s.turn,
+        player: state.activePlayer,
+        message: `Event ${playedId} discarded — a Global Event is already in play`,
+      });
+      return s;
+    }
+    s.globalEvent = {
+      instanceId: `inst-${s.instanceCounter}`,
+      cardId: playedId,
+      strengthModifier: 0,
+      tokens: {},
+    };
+    s.instanceCounter += 1;
+    s.log.push({
+      turn: s.turn,
+      player: state.activePlayer,
+      message: `Event ${playedId} entered the center play area`,
+    });
     return s;
   }
 

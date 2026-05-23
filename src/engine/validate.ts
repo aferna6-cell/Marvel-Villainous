@@ -155,16 +155,18 @@ export function isLegal(state: GameState, action: Action): Legality {
       return true;
     }
 
-    case 'fateOpponent': {
+    case 'fate': {
       if (state.phase !== 'actions' && state.phase !== 'fate') {
         return illegal('can only Fate during the actions or fate phase');
       }
-      // §3/§11: you cannot Fate yourself.
-      if (action.opponent === state.activePlayer) {
-        return illegal('you cannot Fate yourself');
-      }
-      if (!state.playerOrder.includes(action.opponent)) {
-        return illegal('that player is not in this game');
+      // Rulebook: "Reveal one card from the top of the Fate deck, then choose
+      // which player to target." The target choice happens at prompt
+      // resolution, so target-side rules (no-self-Fate, must be a seated
+      // player) live in `cards/effects.ts` resolveFatePlay.
+      // We still need at least one opponent for the action to make sense.
+      const opponents = state.playerOrder.filter((id) => id !== state.activePlayer);
+      if (opponents.length === 0) {
+        return illegal('no opponents to Fate');
       }
       return true;
     }

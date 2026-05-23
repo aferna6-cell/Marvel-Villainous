@@ -74,19 +74,18 @@ describe('App — Thanos M2 end-to-end through the UI', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('link', { name: 'New Game' }));
     fireEvent.click(screen.getByRole('button', { name: /Solo · Thanos/ }));
-    // Move to advance to the Actions phase.
-    const loc3 = screen.getByText(/^Location 3$/).closest('.location');
-    if (!loc3) throw new Error('Location 3 element not found');
-    fireEvent.click(loc3);
+    // Move to Titan (Location 2). The rulebook board for Titan has a
+    // `gainPower` icon in its top (uncovered) row.
+    const loc2 = screen.getByText(/^Location 2$/).closest('.location');
+    if (!loc2) throw new Error('Location 2 element not found');
+    fireEvent.click(loc2);
 
-    // The gainPower icon is the first top-row icon at the current location.
+    // Click the first enabled gainPower icon at the current location.
     const gainPowerButtons = screen.getAllByRole('button', { name: 'gainPower' });
-    // Power starts at 0; clicking the first enabled one bumps it to 1.
     const enabled = gainPowerButtons.find((b) => !(b as HTMLButtonElement).disabled);
     if (!enabled) throw new Error('no enabled gainPower icon');
     fireEvent.click(enabled);
 
-    // Locate the Power readout and assert it became 1.
     const powerLabel = screen.getByText(/^Power:/);
     expect(powerLabel.textContent).toContain('1');
   });

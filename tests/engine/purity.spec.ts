@@ -47,8 +47,8 @@ describe('purity — no action mutates state in place', () => {
     expectPure(game, { kind: 'drawToHandSize' });
   });
 
-  it('fateOpponent', () => {
-    expectPure(makeGame({ phase: 'actions' }), { kind: 'fateOpponent', opponent: 'p2' });
+  it('fate', () => {
+    expectPure(makeGame({ phase: 'actions' }), { kind: 'fate' });
   });
 
   it('endTurn', () => {

@@ -25,10 +25,13 @@ export type CardType =
   | 'effect' // one-shot
   | 'condition' // ongoing on a location
   | 'hero' // fate deck: heroes
-  | 'fateEffect'; // fate deck: one-shot
+  | 'fateEffect' // fate deck: one-shot
+  | 'event'; // fate deck: global or villain-targeted event placed in the center play area
 
 export type ActionIcon =
-  | 'gainPower'
+  | 'gainPower' // gain 1 Power
+  | 'gainPower2' // gain 2 Power (Thanos: Sanctuary II)
+  | 'gainPower3' // gain 3 Power (Thanos: The Infinity Well)
   | 'move'
   | 'play'
   | 'fate'
@@ -150,7 +153,9 @@ export interface Prompt {
 /** Discriminated continuation for resolving a prompt. */
 export type PromptContinuation = {
   kind: 'fatePlay';
-  opponent: PlayerId;
+  /** The eligible opponents the active player may target (any non-self seated player). */
+  eligibleTargets: PlayerId[];
+  /** The card(s) revealed from the shared Fate deck (rulebook: reveal-1, so length 1). */
   revealed: CardId[];
 };
 
@@ -218,6 +223,14 @@ export interface GameState {
   fateDeck: CardId[];
   fateDiscard: CardId[];
   /**
+   * The single Event slot in the center play area (rulebook §I, §J). Only one
+   * Global Event can be in play at a time: "If a Global Event is in play and
+   * you draw a new one from the Fate deck, place the newly drawn Global Event
+   * on the discard pile." Targeted Events also live here; the active Event's
+   * `targetedVillain` (if any) is read from the card definition.
+   */
+  globalEvent: InPlayCard | null;
+  /**
    * Event-bus queue for triggered abilities. Filled by actions/effects and
    * drained (FIFO) at the end of every action before the reducer returns.
    */
@@ -274,7 +287,7 @@ export type Action =
   | { kind: 'attackHero'; allyIds: CardId[]; heroId: CardId }
   | { kind: 'discardCards'; cardIds: CardId[] }
   | { kind: 'drawToHandSize' }
-  | { kind: 'fateOpponent'; opponent: PlayerId }
+  | { kind: 'fate' }
   | { kind: 'resolvePrompt'; choice: PromptChoice }
   | { kind: 'endTurn' };
 

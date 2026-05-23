@@ -165,6 +165,7 @@ export function newGame(opts: NewGameOpts): GameState {
     instanceCounter: 0,
     fateDeck: fateShuffle.items,
     fateDiscard: [],
+    globalEvent: null,
   };
 
   // Skip the Start phase so the first player is immediately ready to move.

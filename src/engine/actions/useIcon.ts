@@ -35,6 +35,10 @@ export function applyUseIcon(
   switch (icon) {
     case 'gainPower':
       return applyGain(s, s.activePlayer, POWER_PER_GAIN_ICON);
+    case 'gainPower2':
+      return applyGain(s, s.activePlayer, 2);
+    case 'gainPower3':
+      return applyGain(s, s.activePlayer, 3);
     case 'activate':
     case 'villainSpecific1':
     case 'villainSpecific2':
