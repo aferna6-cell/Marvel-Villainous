@@ -104,27 +104,16 @@ phase; no icon prerequisite enforced (icons are tracked separately).
 
 Resolved-or-narrowed in CHUNK 5 follow-up via the Ravensburger rulebook PDF.
 
-### Q12 — Thanos's realm: per-location icons (PARTIAL — CHUNK 6 follow-up)
+### Q12 — Per-location icons for all 5 villains (RESOLVED)
 
-Thanos's four locations from the rulebook are: **Sanctuary II, Titan, The
-Infinity Well, Knowhere** (encoded as location ids; `name` stays `''` in repo
-per §0). Icon layouts transcribed by inspecting the high-resolution
-components page of the rulebook PDF:
+All 5 villain boards' icon layouts transcribed directly from the wiki Domain
+section per villain. Wiki convention: line 1 = Fate-side (covered);
+line 2 = player-side (always usable). Engine `topIcons` arrays are the
+player-side (uncovered) entries; `bottomIcons` are the Fate-side (covered)
+entries. See `engine/villains/<v>/realm.ts` for each layout.
 
-| # | Location | Top (uncovered)             | Bottom (Fate-side, covered)    | Confidence |
-| - | --------- | --------------------------- | ------------------------------- | ---------- |
-| 0 | Sanctuary II | `discard`, `move`        | `gainPower2`, `play`            | **read directly** |
-| 1 | Titan        | `gainPower`, `move`      | `discard`, `vanquish`           | **read directly** |
-| 2 | The Infinity Well | `play`, `gainPower3` | `discard`, `move`               | best-effort |
-| 3 | Knowhere     | `vanquish`, `discard`, `move` | `move`                     | best-effort (1+3 split) |
-
-The `gainPower` icon variants (`gainPower2`, `gainPower3`) were added to the
-`ActionIcon` union in CHUNK 6 follow-up to encode the per-icon Power amount
-printed inside each coin.
-
-**Still needed:** physical-board confirmation of Infinity Well and Knowhere
-layouts. Confirmation that Knowhere's icons are genuinely a 1+3 split rather
-than a 2+2 arrangement I misread.
+The `gainPower` icon variants (`gainPower2`, `gainPower3`) encode the
+per-icon Power amount printed inside each coin.
 
 ### Q13 — Thanos's starting numbers (RESOLVED)
 

@@ -101,10 +101,17 @@ once you transcribe.
 Fully transcribed at `engine/villains/common/fateDeck.ts`. 15 cards:
 11 Heroes + 4 Events, with `name: ''` per §0. Q15 resolved.
 
-## Other villains (Hela, Killmonger, Taskmaster, Ultron)
+## Other villains (Hela, Killmonger, Taskmaster, Ultron) — DONE
 
-Per-villain transcription pages will be added with each villain's chunk
-(CHUNK 6+). For now they share the same generic stub structure as Thanos.
+All four remaining villains' decks (30 cards each) and Fate decks (11 cards
+each) are fully transcribed from the Marvel Villainous Wiki. Boards too —
+icon layouts per location are encoded in each `villains/<v>/realm.ts`.
+`name` and `text` stay blank per §0; mechanical metadata only.
+
+Per-card ability behavior (the "what does this card actually DO" wiring)
+is still pending — every card's `effects[]` is either empty or a
+`villainSpecific` stub. That work lands when each villain's objective
+handlers are built.
 
 ## Art to supply
 

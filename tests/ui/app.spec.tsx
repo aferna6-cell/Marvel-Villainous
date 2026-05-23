@@ -33,13 +33,13 @@ describe('App — Thanos M2 end-to-end through the UI', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('link', { name: 'New Game' }));
     expect(screen.getByText(/Choose your villain/i)).toBeTruthy();
-    expect(screen.getByRole('button', { name: /Solo · Thanos/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Solo · thanos/i })).toBeTruthy();
   });
 
   it('starts a Thanos game and renders the board, hand, and turn controls', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('link', { name: 'New Game' }));
-    fireEvent.click(screen.getByRole('button', { name: /Solo · Thanos/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Solo · thanos/i }));
 
     // The board shows Thanos's realm with 4 locations.
     expect(screen.getByRole('heading', { name: 'thanos' })).toBeTruthy();
@@ -59,7 +59,7 @@ describe('App — Thanos M2 end-to-end through the UI', () => {
   it('moves the villain when an empty location is clicked during the Move phase', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('link', { name: 'New Game' }));
-    fireEvent.click(screen.getByRole('button', { name: /Solo · Thanos/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Solo · thanos/i }));
 
     // Click on Location 3 — the villain travels there and the phase advances.
     const loc3 = screen.getByText(/^Location 3$/).closest('.location');
@@ -73,7 +73,7 @@ describe('App — Thanos M2 end-to-end through the UI', () => {
   it('spends a gainPower icon to add power', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('link', { name: 'New Game' }));
-    fireEvent.click(screen.getByRole('button', { name: /Solo · Thanos/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Solo · thanos/i }));
     // Move to Titan (Location 2). The rulebook board for Titan has a
     // `gainPower` icon in its top (uncovered) row.
     const loc2 = screen.getByText(/^Location 2$/).closest('.location');
@@ -93,7 +93,7 @@ describe('App — Thanos M2 end-to-end through the UI', () => {
   it('ends the turn through the End turn button and advances the turn counter', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('link', { name: 'New Game' }));
-    fireEvent.click(screen.getByRole('button', { name: /Solo · Thanos/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Solo · thanos/i }));
     const loc3 = screen.getByText(/^Location 3$/).closest('.location');
     if (!loc3) throw new Error('Location 3 element not found');
     fireEvent.click(loc3);

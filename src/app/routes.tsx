@@ -20,30 +20,34 @@ function MainMenu(): JSX.Element {
   );
 }
 
+const ALL_VILLAINS = ['thanos', 'hela', 'killmonger', 'taskmaster', 'ultron'] as const;
+
 function VillainPicker(): JSX.Element {
   const { setEngine } = useEngineCtx();
   const navigate = useNavigate();
-  const startSolo = (): void => {
-    setEngine(createGameEngine(newGame({ villains: ['thanos'], seed: 1 })));
-    navigate('/game');
-  };
-  const startThanosVsHela = (): void => {
-    setEngine(createGameEngine(newGame({ villains: ['thanos', 'hela'], seed: 1 })));
+  const start = (villains: ('thanos' | 'hela' | 'killmonger' | 'taskmaster' | 'ultron')[]): void => {
+    setEngine(createGameEngine(newGame({ villains: [...villains], seed: 1 })));
     navigate('/game');
   };
   return (
     <main className="screen screen--setup">
       <h2 className="title title--small">Choose your villain</h2>
-      <button className="button button--primary" onClick={startSolo}>
-        Solo · Thanos
+      <p className="hint">Solo (single villain, no Fate):</p>
+      {ALL_VILLAINS.map((v) => (
+        <button key={v} className="button" onClick={() => start([v])}>
+          Solo · {v}
+        </button>
+      ))}
+      <p className="hint">Multi-player (Fate testing):</p>
+      <button className="button button--primary" onClick={() => start(['thanos', 'hela'])}>
+        2-Player · Thanos vs Hela
       </button>
-      <button className="button" onClick={startThanosVsHela}>
-        2-Player · Thanos vs Hela (Fate testing)
+      <button className="button" onClick={() => start(['thanos', 'hela', 'killmonger', 'ultron'])}>
+        4-Player · Thanos / Hela / Killmonger / Ultron
       </button>
       <p className="hint">
-        Other villains arrive in later chunks. Card and board data are stubs
-        until you transcribe your physical copy — see
-        <code> assets/CONTENT_TODO.md</code>.
+        Per-card ability behavior is still being wired in — see
+        <code> RULES_QUESTIONS.md</code> for the open items.
       </p>
       <Link className="button" to="/">
         Back

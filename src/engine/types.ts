@@ -26,7 +26,8 @@ export type CardType =
   | 'condition' // ongoing on a location
   | 'hero' // fate deck: heroes
   | 'fateEffect' // fate deck: one-shot
-  | 'event'; // fate deck: global or villain-targeted event placed in the center play area
+  | 'event' // fate deck: global or villain-targeted event placed in the center play area
+  | 'specialty'; // villain-unique card played to the right side of the Domain (rulebook §J)
 
 export type ActionIcon =
   | 'gainPower' // gain 1 Power

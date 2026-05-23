@@ -1,17 +1,37 @@
-// Hela's realm. CHUNK 6 fills in per-board icons; for now the same generic
-// 4-location stub used by setup.ts.
+// Hela's realm — 4 locations from the printed board, transcribed from the
+// Marvel Villainous Wiki Domain section.
+//
+// Wiki convention (per the Hela page): line 1 = Fate-side (covered); line 2
+// = player-side (always usable). The engine's `topIcons` / `bottomIcons`
+// arrays are the SWAPPED-from-wiki view (top = uncovered).
 
 import type { ActionIcon, Location, Realm } from '../../types';
 
-const TOP_PLACEHOLDER: ActionIcon[] = ['gainPower', 'play'];
-const BOTTOM_PLACEHOLDER: ActionIcon[] = ['move', 'fate'];
+export const HELA_LOCATION_IDS = [
+  'hela-loc-niflheim',
+  'hela-loc-hel',
+  'hela-loc-gjoll',
+  'hela-loc-odins-vault',
+] as const;
+
+const HELA_LOCATION_ICONS: readonly { top: ActionIcon[]; bottom: ActionIcon[] }[] = [
+  // Niflheim — wiki: line1 [Play] / line2 [Vanquish,Relocate,Fate]
+  { top: ['vanquish', 'move', 'fate'], bottom: ['play'] },
+  // Hel — wiki: line1 [Gain2,Vanquish] / line2 [Play,Discard]
+  { top: ['play', 'discard'], bottom: ['gainPower2', 'vanquish'] },
+  // Gjoll — wiki: line1 [Fate,Gain1] / line2 [Activate,Play]
+  { top: ['activate', 'play'], bottom: ['fate', 'gainPower'] },
+  // Odin's Vault — wiki: line1 [Discard,Play] / line2 [Play,Gain3]
+  { top: ['play', 'gainPower3'], bottom: ['discard', 'play'] },
+];
 
 function helaLocation(idx: number): Location {
+  const icons = HELA_LOCATION_ICONS[idx];
   return {
-    id: `hela-loc-${idx}`,
+    id: HELA_LOCATION_IDS[idx] ?? `hela-loc-${idx}`,
     name: '',
-    topIcons: [...TOP_PLACEHOLDER],
-    bottomIcons: [...BOTTOM_PLACEHOLDER],
+    topIcons: [...(icons?.top ?? [])],
+    bottomIcons: [...(icons?.bottom ?? [])],
     heroesPresent: [],
     alliesPresent: [],
     itemsPresent: [],

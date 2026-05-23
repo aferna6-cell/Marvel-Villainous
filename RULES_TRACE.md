@@ -76,7 +76,17 @@ below cite the booklet's printed pagination as parsed from the PDF.
 | Thanos's starting hand size                      | 4                                             | Setup §6                         |
 | Thanos's deck size                               | 30 cards (10 Allies + 16 Effects + 4 Items)   | `villains/thanos/deck.ts` — Components + per-card wiki infoboxes |
 | Thanos's Fate-deck composition                   | 11 cards (4 Heroes + 6 Effects + 1 Event)     | `villains/thanos/fateDeck.ts` — per-card wiki infoboxes |
+| Hela's deck size                                 | 30 cards (11 Allies + 14 Effects + 2 Items + 3 Specialties) | `villains/hela/deck.ts` — wiki infoboxes |
+| Hela's Fate-deck composition                     | 11 cards (5 Heroes + 4 Effects + 1 Event + 1 Item) | `villains/hela/fateDeck.ts` |
+| Killmonger's deck size                           | 30 cards (7 Allies + 9 Effects + 10 Items + 4 Specialties) | `villains/killmonger/deck.ts` |
+| Killmonger's Fate-deck composition               | 11 cards (8 Heroes + 2 Effects + 1 Event)     | `villains/killmonger/fateDeck.ts` |
+| Ultron's deck size                               | 30 cards (13 Allies + 11 Effects + 6 Items)   | `villains/ultron/deck.ts` |
+| Ultron's Fate-deck composition                   | 11 cards (5 Heroes + 3 Effects + 2 Items + 1 Event) | `villains/ultron/fateDeck.ts` |
+| Taskmaster's deck size                           | 30 cards (10 Allies + 10 Effects + 8 Items + 2 Specialties) | `villains/taskmaster/deck.ts` |
+| Taskmaster's Fate-deck composition               | 11 cards (6 Heroes + 4 Effects + 1 Event)     | `villains/taskmaster/fateDeck.ts` |
 | Common Fate deck composition                     | 15 cards (11 Heroes + 4 Events)               | `villains/common/fateDeck.ts` — per-card wiki infoboxes |
+| Per-board icon layout (all 5 villains)           | wiki Domain section per villain               | `villains/<v>/realm.ts` |
+| Specialty cards (right side of Domain)           | new `'specialty'` CardType                    | `engine/types.ts` — rulebook §J |
 | Per-villain realm factory wired to setup         | `villains/index.ts` — `villains[v].makeRealm` |                                  |
 | Thanos-only New Game from the menu                | `app/routes.tsx` — `VillainPicker`            |                                  |
 
