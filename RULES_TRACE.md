@@ -135,6 +135,30 @@ below cite the booklet's printed pagination as parsed from the PDF.
 | Empty Fate deck reshuffles the Fate discard      | `engine/actions/fate.ts` — `applyFate`   | (deck-exhaust convention; parallel rule) |
 | A pending prompt halts the auto-advance loop     | `engine/state.ts` — `autoAdvance`         |                                  |
 
+## Per-villain mechanical handlers (M4–M6)
+
+| Rule                                            | Code location                          | Rulebook citation               |
+| ------------------------------------------------ | ---------------------------------------- | -------------------------------- |
+| Thanos: `placeStone` bumps `stones`, records the named stone in `flags.stones` | `villains/thanos/specific.ts` | Thanos Objective (Infinity Stones) |
+| Thanos: `snap` sets winner iff 6 stones collected | `villains/thanos/specific.ts` | Thanos Objective (the Snap) |
+| Hela: `placeSoulMark` bumps `asgard`             | `villains/hela/specific.ts` | Hela Objective (Soul Marks at Odin's Vault) |
+| Hela: `controlAsgard` sets winner iff asgard >= 8 | `villains/hela/specific.ts` | Hela Objective |
+| Killmonger: `defeatBoss` bumps `bosses`          | `villains/killmonger/specific.ts` | Killmonger Objective |
+| Killmonger: `claimWakanda` sets winner iff 4 bosses defeated | `villains/killmonger/specific.ts` | Killmonger Objective |
+| Taskmaster: `completeContract` bumps `contracts`, records the id | `villains/taskmaster/specific.ts` | Taskmaster Objective (contracts) |
+| Ultron: `installUpgrade` bumps `upgrades`, records the slot | `villains/ultron/specific.ts` | Ultron Objective (tech track) |
+| Ultron: `markFinalForm` sets the `finalForm` flag | `villains/ultron/specific.ts` | Ultron Objective (final form) |
+| Targeted Event placement constraint              | `engine/cards/effects.ts` — `resolveFatePlay` event branch (checks `def.targetedVillain`) | §I: Targeted Events must be played on the indicated villain |
+
+## Engine escape hatches (hotseat ergonomics)
+
+| Rule                                            | Code location                          | Why                              |
+| ------------------------------------------------ | ---------------------------------------- | -------------------------------- |
+| `removeFromPlay` removes a single in-play card from any zone → appropriate discard pile | `engine/actions/removeFromPlay.ts` | Resolves "defeat X" / "discard this Ally" effects the engine doesn't auto-apply (§0) |
+| `undo` rewinds the engine one action (bounded 12-deep snapshot ring) | `engine/state.ts` — `pushHistory` + early-return on `undo` | Misclick recovery for hotseat (stretch goal §12) |
+| `adjustPower` ticks the named player's power ±n, floored at 0 | `engine/actions/manual.ts` — `applyAdjustPower` | Resolves "gain N Power" / "lose N Power" card text |
+| `drawCards` lets any player draw N cards out of phase | `engine/actions/manual.ts` — `applyDrawCards` | Resolves "draw N cards" card text mid-turn |
+
 ## Q-resolved rule clarifications (most recent batch)
 
 | Rule                                            | Code location                          | RULES_QUESTIONS link              |

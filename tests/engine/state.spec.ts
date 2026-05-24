@@ -44,6 +44,7 @@ function makeState(): GameState {
     usedIcons: [],
     instanceCounter: 0,
     strictIconMode: false,
+    history: [],
     fateDeck: [],
     fateDiscard: [],
     globalEvent: null,

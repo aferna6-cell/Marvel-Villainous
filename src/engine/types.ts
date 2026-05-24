@@ -62,6 +62,12 @@ export interface CardDef {
   effects: EffectSpec[]; // mechanical encoding (see §2.3)
   icons: ActionIcon[]; // if hero, which icons it COVERS at a location
   tags?: string[]; // 'avenger', 'asgard', etc. for conditional effects
+  /**
+   * Targeted Events (rulebook §I): when an Event card is "Targeted" at a
+   * specific villain, it MUST be played on the indicated villain when
+   * drawn from Fate. Untargeted (Global) Events have no constraint.
+   */
+  targetedVillain?: VillainKey;
 }
 
 /** A card instance physically present in a realm. */
@@ -262,6 +268,14 @@ export interface GameState {
    * enforcement (Q2) when they're ready.
    */
   strictIconMode: boolean;
+  /**
+   * Bounded ring buffer of prior `GameState` snapshots, FIFO. The reducer
+   * pushes a snapshot before applying any action other than `undo` itself.
+   * The `undo` action pops the most recent snapshot back into place.
+   * Cap small (≈12) so memory stays bounded — a hotseat group rarely needs
+   * to rewind further than a turn or two.
+   */
+  history: GameState[];
 }
 
 // --- Triggered-ability event bus -------------------------------------------
@@ -328,7 +342,36 @@ export type Action =
    */
   | { kind: 'setObjectiveCount'; player: PlayerId; key: string; delta: number }
   /** Toggle the rulebook-strict icon enforcement (Q2). */
-  | { kind: 'setStrictIconMode'; value: boolean };
+  | { kind: 'setStrictIconMode'; value: boolean }
+  /**
+   * Remove a single in-play card instance (ally / hero / item / condition,
+   * or the global event) from wherever it is in `state`, sending it to the
+   * appropriate discard pile. Player effects routinely defeat / discard /
+   * destroy in-play cards; this is the engine's escape hatch for the
+   * hotseat group to mechanize that outside Vanquish.
+   */
+  | { kind: 'removeFromPlay'; owner: PlayerId; instanceId: InstanceId }
+  /**
+   * Rewind the engine to the previous game state. The reducer keeps a
+   * one-deep snapshot of the prior state (`history`) so the hotseat group
+   * can recover from a misclick without restarting. Successive undos pop
+   * further snapshots until none remain.
+   */
+  | { kind: 'undo' }
+  /**
+   * Free-form Power adjustment. Card text routinely says "lose 2 Power" /
+   * "gain 1 Power", and the engine doesn't auto-resolve most card text
+   * (§0). Player ticks ± with this action. Power clamps at zero on the
+   * way down (no negative Power per rulebook §11).
+   */
+  | { kind: 'adjustPower'; player: PlayerId; delta: number }
+  /**
+   * Draw N cards (out of phase). The end-of-turn refill uses
+   * `drawToHandSize`; this is the corresponding hand-mid-turn action for
+   * cards that say "draw 1 card". Empty deck reshuffles the discard pile
+   * per rulebook (Draw Cards).
+   */
+  | { kind: 'drawCards'; player: PlayerId; n: number };
 
 export type ActionKind = Action['kind'];
 

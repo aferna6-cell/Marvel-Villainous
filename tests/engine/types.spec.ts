@@ -2,7 +2,7 @@ import { describe, expectTypeOf, it } from 'vitest';
 import type { Action, EffectSpec } from '../../src/engine/types';
 
 describe('Action union', () => {
-  it('is discriminated on `kind` over exactly the ten action kinds', () => {
+  it('is discriminated on `kind` over the action kinds', () => {
     expectTypeOf<Action['kind']>().toEqualTypeOf<
       | 'startTurn'
       | 'moveVillain'
@@ -18,6 +18,10 @@ describe('Action union', () => {
       | 'relocateAlly'
       | 'setObjectiveCount'
       | 'setStrictIconMode'
+      | 'removeFromPlay'
+      | 'undo'
+      | 'adjustPower'
+      | 'drawCards'
     >();
   });
 
@@ -67,6 +71,14 @@ describe('Action union', () => {
           return `${a.player}:${a.key}:${a.delta}`;
         case 'setStrictIconMode':
           return `strict:${a.value}`;
+        case 'removeFromPlay':
+          return `remove:${a.owner}:${a.instanceId}`;
+        case 'undo':
+          return a.kind;
+        case 'adjustPower':
+          return `power:${a.player}:${a.delta}`;
+        case 'drawCards':
+          return `draw:${a.player}:${a.n}`;
         default: {
           // If a new Action kind is added without a case above, `a` is no
           // longer `never` here and this assignment fails to compile.

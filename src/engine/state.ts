@@ -20,6 +20,8 @@ import { applyClaimVictory } from './actions/claim';
 import { applySetObjectiveCount, checkWin } from './actions/objective';
 import { applyRelocateAlly } from './actions/relocate';
 import { applySetStrictIconMode, findUnusedIcon, consumeIcon } from './actions/strict';
+import { applyRemoveFromPlay } from './actions/removeFromPlay';
+import { applyAdjustPower, applyDrawCards } from './actions/manual';
 import * as startOfTurn from './phases/startOfTurn';
 import * as mainPhase from './phases/mainPhase';
 import * as fatePhase from './phases/fatePhase';
@@ -90,10 +92,34 @@ export function autoAdvance(state: GameState): GameState {
  * Pure reducer: `(state, action) => newState`. Throws if the action is
  * illegal, so an illegal action can never produce a state.
  */
+const HISTORY_CAP = 12;
+
+/** Push a snapshot of `state` (minus its own history) onto `next.history`. */
+function pushHistory(next: GameState, state: GameState): void {
+  const snapshot: GameState = { ...cloneState(state), history: [] };
+  next.history = [...next.history, snapshot];
+  if (next.history.length > HISTORY_CAP) next.history.shift();
+}
+
 export function reduce(state: GameState, action: Action): GameState {
   const legal = isLegal(state, action);
   if (legal !== true) {
     throw new Error(`illegal action "${action.kind}": ${legal.reason}`);
+  }
+
+  // Undo short-circuits: pop the previous snapshot back into place and
+  // skip the rest of the reducer pipeline (no auto-advance, no triggers,
+  // so the rewind is exact).
+  if (action.kind === 'undo') {
+    const prior = state.history[state.history.length - 1];
+    if (!prior) throw new Error('undo: no history (validate.ts should have caught this)');
+    const restored = cloneState(prior);
+    restored.history = state.history.slice(0, -1);
+    restored.log = [
+      ...restored.log,
+      { turn: restored.turn, player: state.activePlayer, message: 'undo: rewound one step' },
+    ];
+    return restored;
   }
 
   let next: GameState;
@@ -145,8 +171,27 @@ export function reduce(state: GameState, action: Action): GameState {
     case 'setStrictIconMode':
       next = applySetStrictIconMode(state, action.value);
       break;
+    case 'removeFromPlay':
+      next = applyRemoveFromPlay(state, action.owner, action.instanceId);
+      break;
+    case 'adjustPower':
+      next = applyAdjustPower(state, action.player, action.delta);
+      break;
+    case 'drawCards':
+      next = applyDrawCards(state, action.player, action.n);
+      break;
     default:
       return assertNever(action);
+  }
+
+  // Snapshot the *prior* state into `next.history` so a subsequent `undo`
+  // rewinds to it. Don't snapshot for `undo` itself (handled above) or for
+  // the no-op `setStrictIconMode` toggle (rewinding the toggle alone is
+  // pointless and would pollute history with one-bit flips).
+  if (action.kind !== 'setStrictIconMode') {
+    pushHistory(next, state);
+  } else {
+    next.history = state.history;
   }
 
   // Q2: in strict-icon mode, the gated actions consume a matching icon at

@@ -32,15 +32,40 @@ The app is **playable** end-to-end as a hotseat state-tracker:
   and consume it. OFF (default) treats the engine as a relaxed state
   tracker — the group handles icon spending themselves, as the rulebook
   describes.
+- **Undo button** — rewinds the engine one action (bounded 12-deep history)
+  for misclick recovery.
+- **Manual escape hatches** for resolving card text the engine doesn't
+  auto-apply (because §0 forbids card text in the repo):
+  - Right-click any in-play card → remove it from play to the right
+    discard pile (resolves "defeat X" / "discard this Ally" effects).
+  - `−Pow` / `+Pow` / `+Draw` buttons next to the turn controls for
+    ad-hoc Power adjustments and out-of-phase draws.
+  - `+/-` widgets on the Objective tracker for the per-villain
+    objective counters (Stones, Soul Marks, bosses, contracts, etc.).
+- **Per-villain `villainSpecific` handlers** wire the mechanical
+  primitives each villain needs (place a Stone, complete a contract,
+  install an Upgrade, place a Soul Mark, defeat a boss, claim Wakanda,
+  Snap, control Asgard). Cards declare these via `effects: [{ op:
+  'villainSpecific', key: '<key>', payload: ... }]` — no card text in
+  the repo; the keys are mechanical metadata.
+- **Targeted Event constraint**: Fate Events with a `targetedVillain`
+  field land only on the named villain's realm; others are discarded
+  with no effect (rulebook §I).
 
 ### What the engine does NOT yet enforce
 
 Per-card ability behavior — the "what does this card actually do when
-played" wiring — is not implemented for most cards. The mechanical numbers
-are right (costs, strengths, copy counts, types) so the game tracks
-correctly, but card-text effects are honor-system: players who know the
-rulebook can play their card and **manually** adjust state if the engine
-doesn't auto-apply the effect.
+played" wiring — is intentionally not auto-applied for most cards
+because §0 of `marvel-villainous-plan.md` forbids encoding card text /
+names / art in this repo. The mechanical numbers are right (costs,
+strengths, copy counts, types) so the game tracks correctly, and the
+engine supplies the escape hatches above (remove-from-play,
+adjust-power, draw-cards, objective ± widgets) so the group can
+mechanize any card's text in one or two clicks. For abilities a card
+*does* encode mechanically (via `effects: EffectSpec[]`), the
+interpreter in `engine/cards/effects.ts` runs them automatically:
+`gainPower`, `drawCards`, `discardSelf`, `boostStrength`, `placeToken`,
+`defeatHero`, and every per-villain `villainSpecific` key listed above.
 
 The **Claim victory** button is how a player ends the game: when your
 printed objective is met (Thanos's six Infinity Stones, Hela's eight Allies

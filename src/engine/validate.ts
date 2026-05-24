@@ -237,6 +237,30 @@ export function isLegal(state: GameState, action: Action): Legality {
     case 'setStrictIconMode':
       return true;
 
+    case 'removeFromPlay': {
+      if (!state.playerOrder.includes(action.owner)) {
+        return illegal('that player is not in this game');
+      }
+      return true;
+    }
+
+    case 'undo':
+      if (state.history.length === 0) return illegal('nothing to undo');
+      return true;
+
+    case 'adjustPower':
+      if (!state.playerOrder.includes(action.player)) {
+        return illegal('that player is not in this game');
+      }
+      return true;
+
+    case 'drawCards':
+      if (!state.playerOrder.includes(action.player)) {
+        return illegal('that player is not in this game');
+      }
+      if (action.n <= 0) return illegal('drawCards: n must be positive');
+      return true;
+
     default:
       return assertNever(action);
   }

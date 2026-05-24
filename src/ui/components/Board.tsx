@@ -25,7 +25,7 @@ export function Board(): JSX.Element {
           <strong>{state.globalEvent.cardId}</strong>
         </div>
       ) : null}
-      <Realm realm={active.realm} />
+      <Realm realm={active.realm} owner={state.activePlayer} />
       {opponents.length > 0 ? (
         <div className="board__opponents">
           <h4 className="board__opponents-title">Opponents</h4>
@@ -34,7 +34,7 @@ export function Board(): JSX.Element {
               <div className="board__opponent-header">
                 <strong>{p.id}</strong> · {p.villain} · power {p.power}
               </div>
-              <Realm realm={p.realm} readOnly />
+              <Realm realm={p.realm} owner={p.id} readOnly />
             </div>
           ))}
         </div>

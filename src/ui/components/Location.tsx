@@ -1,16 +1,18 @@
 import type { DragEvent, MouseEvent } from 'react';
 import { useEngine, useGameState } from '../hooks/useGameEngine';
-import type { Location as LocationT, LocationIndex } from '../../engine/types';
+import type { InstanceId, Location as LocationT, LocationIndex, PlayerId } from '../../engine/types';
 
 interface LocationProps {
   location: LocationT;
   index: LocationIndex;
+  /** Which player owns this realm. */
+  owner: PlayerId;
   /** Display-only mode for opponents' realms (no interaction). */
   readOnly?: boolean;
 }
 
 /** A single location strip: top row, in-play zones, bottom row covered by heroes. */
-export function Location({ location, index, readOnly = false }: LocationProps): JSX.Element {
+export function Location({ location, index, owner, readOnly = false }: LocationProps): JSX.Element {
   const engine = useEngine();
   const state = useGameState();
   const active = state.players[state.activePlayer];
@@ -59,6 +61,18 @@ export function Location({ location, index, readOnly = false }: LocationProps): 
     tryDispatch(() => engine.dispatch({ kind: 'useIcon', location: index, iconIndex }));
   };
 
+  // Right-click an in-play card to discard it (any zone). Players use this
+  // to resolve card-text effects the engine doesn't auto-apply (§0): "defeat
+  // this Hero", "discard this Ally", etc. Only enabled on the active
+  // player's own realm — opponent realms are read-only display.
+  const onRemove = (e: MouseEvent<HTMLElement>, instanceId: InstanceId): void => {
+    if (readOnly) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (!window.confirm('Remove this card from play?')) return;
+    tryDispatch(() => engine.dispatch({ kind: 'removeFromPlay', owner, instanceId }));
+  };
+
   const classes = [
     'location',
     isCurrent ? 'location--current' : '',
@@ -96,28 +110,48 @@ export function Location({ location, index, readOnly = false }: LocationProps): 
 
       <div className="location__heroes">
         {location.heroesPresent.map((h) => (
-          <span key={h.instanceId} className="card-mini card-mini--hero">
+          <span
+            key={h.instanceId}
+            className="card-mini card-mini--hero"
+            onContextMenu={(e) => onRemove(e, h.instanceId)}
+            title="right-click to remove from play"
+          >
             ⚔ {h.cardId}
           </span>
         ))}
       </div>
       <div className="location__allies">
         {location.alliesPresent.map((a) => (
-          <span key={a.instanceId} className="card-mini card-mini--ally">
+          <span
+            key={a.instanceId}
+            className="card-mini card-mini--ally"
+            onContextMenu={(e) => onRemove(e, a.instanceId)}
+            title="right-click to remove from play"
+          >
             ⚒ {a.cardId}
           </span>
         ))}
       </div>
       <div className="location__items">
         {location.itemsPresent.map((it) => (
-          <span key={it.instanceId} className="card-mini card-mini--item">
+          <span
+            key={it.instanceId}
+            className="card-mini card-mini--item"
+            onContextMenu={(e) => onRemove(e, it.instanceId)}
+            title="right-click to remove from play"
+          >
             ◆ {it.cardId}
           </span>
         ))}
       </div>
       <div className="location__conditions">
         {location.conditions.map((c) => (
-          <span key={c.instanceId} className="card-mini card-mini--condition">
+          <span
+            key={c.instanceId}
+            className="card-mini card-mini--condition"
+            onContextMenu={(e) => onRemove(e, c.instanceId)}
+            title="right-click to remove from play"
+          >
             ⚠ {c.cardId}
           </span>
         ))}

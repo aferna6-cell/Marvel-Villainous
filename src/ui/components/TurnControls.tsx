@@ -81,6 +81,37 @@ export function TurnControls(): JSX.Element {
         >
           End turn
         </button>
+        <button
+          className="button"
+          disabled={state.history.length === 0}
+          onClick={() => tryDispatch(() => engine.dispatch({ kind: 'undo' }))}
+          title="Rewind the engine one action. Useful for misclicks."
+        >
+          Undo ({state.history.length})
+        </button>
+        <span className="turn-controls__manual" title="Hand-resolve card text the engine doesn't auto-apply.">
+          <button
+            className="button button--mini"
+            onClick={() => tryDispatch(() => engine.dispatch({ kind: 'adjustPower', player: state.activePlayer, delta: -1 }))}
+            aria-label="lose 1 power"
+          >
+            −Pow
+          </button>
+          <button
+            className="button button--mini"
+            onClick={() => tryDispatch(() => engine.dispatch({ kind: 'adjustPower', player: state.activePlayer, delta: +1 }))}
+            aria-label="gain 1 power"
+          >
+            +Pow
+          </button>
+          <button
+            className="button button--mini"
+            onClick={() => tryDispatch(() => engine.dispatch({ kind: 'drawCards', player: state.activePlayer, n: 1 }))}
+            aria-label="draw 1 card"
+          >
+            +Draw
+          </button>
+        </span>
         <label
           className="turn-controls__strict"
           title="Q2: when ON, playing a card / attacking / fating / discarding / relocating each require an unused matching icon at your villain's current location and consume it. Off = relaxed state tracker (you handle the rule yourselves)."

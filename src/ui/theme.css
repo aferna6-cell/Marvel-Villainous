@@ -337,6 +337,20 @@ button {
   cursor: pointer;
 }
 
+.turn-controls__manual {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  margin-left: 0.4rem;
+  padding-left: 0.4rem;
+  border-left: 1px solid var(--accent-dim);
+}
+
+.button--mini {
+  padding: 0.15rem 0.35rem;
+  font-size: 0.75rem;
+}
+
 /* --- Hand -------------------------------------------------------------- */
 
 .hand {

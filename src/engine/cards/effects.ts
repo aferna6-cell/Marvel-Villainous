@@ -413,6 +413,19 @@ function resolveFatePlay(
   }
 
   if (def.type === 'event') {
+    // Targeted Event constraint (rulebook §I, Q18 follow-up): if the Event
+    // card names a specific villain, it MUST land on that villain. If the
+    // chosen target is a different villain, the rulebook says to discard
+    // it with no effect.
+    if (def.targetedVillain !== undefined && opponent.villain !== def.targetedVillain) {
+      s.fateDiscard.push(playedId);
+      s.log.push({
+        turn: s.turn,
+        player: state.activePlayer,
+        message: `Targeted Event ${playedId} discarded — ${targetId} is not ${def.targetedVillain}`,
+      });
+      return s;
+    }
     // Rulebook §I: a Global Event card goes to the center play area as a new
     // and unique "location." Only one may be in play at a time — if one is
     // already in play, the newly drawn one goes to the discard.
