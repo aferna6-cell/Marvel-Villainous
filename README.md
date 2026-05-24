@@ -51,6 +51,15 @@ The app is **playable** end-to-end as a hotseat state-tracker:
 - **Targeted Event constraint**: Fate Events with a `targetedVillain`
   field land only on the named villain's realm; others are discarded
   with no effect (rulebook §I).
+- **AI move advisor** (plan §8): "Suggest a move" button in the turn
+  controls runs a single-action top-3 search — enumerates every legal
+  action from the current state, simulates each through the pure
+  reducer, scores the resulting state with a per-villain weighted
+  feature set (objective progress, power, hand quality, board
+  control, icon access, opponent threat, fate leverage), and surfaces
+  the top three with a deterministic feature-delta rationale ("Why?"
+  expander) and a one-click "Use this." Strictly opt-in — the
+  advisor never moves the game state without an explicit click.
 
 ### What the engine does NOT yet enforce
 

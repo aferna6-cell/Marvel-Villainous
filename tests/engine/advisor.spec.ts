@@ -35,14 +35,17 @@ describe('AI advisor (heuristic suggestMove)', () => {
     expect(rec?.action.kind).toBe('startTurn');
   });
 
-  it('suggests playCard when the active player can afford a card', () => {
-    registerCards([makeCard({ id: 'cheap', cost: 1 })]);
+  it('suggests playCard when the active player can afford a strong ally', () => {
+    // A high-strength ally is a much better state-value than gaining 1 Power
+    // at the gainPower icon. The advisor scores the simulated next-state and
+    // should prefer playing the ally.
+    registerCards([makeCard({ id: 'big', type: 'ally', cost: 1, strength: 5 })]);
     const game = makeGame({ phase: 'actions' });
-    game.players.p1.hand = ['cheap'];
+    game.players.p1.hand = ['big'];
     game.players.p1.power = 2;
     const rec = suggestMove(game, 'p1');
     expect(rec?.action.kind).toBe('playCard');
-    if (rec?.action.kind === 'playCard') expect(rec.action.cardId).toBe('cheap');
+    if (rec?.action.kind === 'playCard') expect(rec.action.cardId).toBe('big');
   });
 
   it('falls back to endTurn when no actions look productive', () => {

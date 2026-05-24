@@ -119,13 +119,21 @@ below cite the booklet's printed pagination as parsed from the PDF.
 | `claimVictory` action lets a player ratify a win | `engine/actions/claim.ts` — `applyClaimVictory` | (escape hatch) |
 | `setObjectiveCount` action tallies progress      | `engine/actions/objective.ts` — `applySetObjectiveCount` | (player-tally) |
 
-## AI advisor (plan §8 stub)
+## AI advisor (plan §8)
 
 | Rule                                            | Code location                          | Notes                            |
 | ------------------------------------------------ | ---------------------------------------- | -------------------------------- |
-| `suggestMove` returns a heuristic recommendation | `engine/advisor/index.ts`              | minimal version; full enumeration + scoring per plan §8 is future work |
-| Advisor only suggests for the active player      | `engine/advisor/index.ts`              | per plan §8 — opt-in, every turn |
-| Every suggested action is checked against `isLegal` | `engine/advisor/index.ts`           | faithfulness guarantee per plan §8.5 |
+| State-value scoring with the §8.2 feature set    | `engine/advisor/score.ts` — `score`, `features` | progressTowardObjective, powerInBank, handQuality, boardControl, iconAccess, opponentThreat, fateLeverage |
+| Per-villain weight tables + objective bonus      | `engine/advisor/villains/<v>.ts` | weights tuned per the plan's starting table |
+| Single-action top-K candidate enumeration        | `engine/advisor/search.ts` — `searchTopK` | enumerates legal actions for the current phase, simulates each through the pure reducer, scores the result |
+| Deterministic feature-delta rationale            | `engine/advisor/explain.ts` — `explain` | one action sentence + up to 3 highest-impact Δ bullets |
+| `suggestMove(state, p)` returns the top pick     | `engine/advisor/index.ts` | back-compat single-rec API |
+| `suggestTopK(state, p, k)` returns the top K     | `engine/advisor/index.ts` | UI uses k=3 |
+| Advisor only suggests for the active player      | `engine/advisor/index.ts` | opt-in, every turn |
+| Every recommended action passes `isLegal`        | `engine/advisor/search.ts` (filter) + tested in `tests/engine/advisorSearch.spec.ts` | faithfulness guarantee per plan §8.5 |
+| Determinism (same state → same recommendation)   | tested in `tests/engine/advisorSearch.spec.ts` | per plan §8.7 |
+| One-from-a-win sanity (picks the winning play)   | tested in `tests/engine/advisorSearch.spec.ts` | per plan §8.7 (Thanos + Killmonger cases) |
+| UI: Suggest a move → top + Why? + Other options  | `ui/components/AdvisorPanel.tsx` | per plan §8.4 |
 
 ## Engine mechanics
 
