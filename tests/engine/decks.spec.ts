@@ -22,11 +22,21 @@ function countByType(cards: CardDef[], type: CardType): number {
   return cards.filter((c) => c.type === type).length;
 }
 
-/** Every CardDef must keep `name: ''` and have no `text` field per §0. */
-function expectNoProprietaryContent(deck: CardDef[]): void {
+/**
+ * §0 was overridden by the user — cards now SHOULD carry their printed
+ * name + ability text. This helper enforces the new invariant: every
+ * card has a non-empty `name`. (`text` is required for cards with any
+ * printed ability; vanilla allies/items without ability text legitimately
+ * have undefined text, so we only assert it for cards that declare any
+ * effect.)
+ */
+function expectFullCardData(deck: CardDef[]): void {
   for (const c of deck) {
-    expect(c.name).toBe('');
-    expect(c.text).toBeUndefined();
+    expect(c.name).not.toBe('');
+    if (c.effects.length > 0) {
+      // If there's a mechanical effect, the printed text should explain it.
+      expect(typeof c.text).toBe('string');
+    }
   }
 }
 
@@ -41,8 +51,8 @@ describe('Thanos villain deck (30 cards)', () => {
     expect(countByType(thanosDeck, 'item')).toBe(4);
   });
 
-  it('every card has empty `name` (project §0 — no proprietary content)', () => {
-    for (const c of thanosDeck) expect(c.name).toBe('');
+  it('every card carries its printed name + text', () => {
+    expectFullCardData(thanosDeck);
   });
 
   it('every Ally has a positive Strength', () => {
@@ -70,8 +80,8 @@ describe('Thanos villain Fate deck (11 cards)', () => {
     }
   });
 
-  it('every card has empty `name`', () => {
-    for (const c of thanosFateDeck) expect(c.name).toBe('');
+  it('every card carries its printed name + text', () => {
+    expectFullCardData(thanosFateDeck);
   });
 });
 
@@ -89,8 +99,8 @@ describe('Common Fate deck (15 cards)', () => {
     for (const c of commonFateDeck) expect(c.villain).toBe('fate-common');
   });
 
-  it('every card has empty `name`', () => {
-    for (const c of commonFateDeck) expect(c.name).toBe('');
+  it('every card carries its printed name + text', () => {
+    expectFullCardData(commonFateDeck);
   });
 });
 
@@ -104,8 +114,8 @@ describe('Hela villain deck (30 cards)', () => {
     expect(countByType(helaDeck, 'item')).toBe(2);
     expect(countByType(helaDeck, 'specialty')).toBe(3);
   });
-  it('keeps proprietary content out of the repo', () => {
-    expectNoProprietaryContent(helaDeck);
+  it('carries printed name + text on every card', () => {
+    expectFullCardData(helaDeck);
   });
 });
 
@@ -119,8 +129,8 @@ describe('Hela villain Fate deck (11 cards)', () => {
     expect(countByType(helaFateDeck, 'event')).toBe(1);
     expect(countByType(helaFateDeck, 'item')).toBe(1);
   });
-  it('keeps proprietary content out of the repo', () => {
-    expectNoProprietaryContent(helaFateDeck);
+  it('carries printed name + text on every card', () => {
+    expectFullCardData(helaFateDeck);
   });
 });
 
@@ -134,8 +144,8 @@ describe('Killmonger villain deck (30 cards)', () => {
     expect(countByType(killmongerDeck, 'item')).toBe(10);
     expect(countByType(killmongerDeck, 'specialty')).toBe(4);
   });
-  it('keeps proprietary content out of the repo', () => {
-    expectNoProprietaryContent(killmongerDeck);
+  it('carries printed name + text on every card', () => {
+    expectFullCardData(killmongerDeck);
   });
 });
 
@@ -148,8 +158,8 @@ describe('Killmonger villain Fate deck (11 cards)', () => {
     expect(countByType(killmongerFateDeck, 'fateEffect')).toBe(2);
     expect(countByType(killmongerFateDeck, 'event')).toBe(1);
   });
-  it('keeps proprietary content out of the repo', () => {
-    expectNoProprietaryContent(killmongerFateDeck);
+  it('carries printed name + text on every card', () => {
+    expectFullCardData(killmongerFateDeck);
   });
 });
 
@@ -162,8 +172,8 @@ describe('Ultron villain deck (30 cards)', () => {
     expect(countByType(ultronDeck, 'effect')).toBe(11);
     expect(countByType(ultronDeck, 'item')).toBe(6);
   });
-  it('keeps proprietary content out of the repo', () => {
-    expectNoProprietaryContent(ultronDeck);
+  it('carries printed name + text on every card', () => {
+    expectFullCardData(ultronDeck);
   });
 });
 
@@ -177,8 +187,8 @@ describe('Ultron villain Fate deck (11 cards)', () => {
     expect(countByType(ultronFateDeck, 'item')).toBe(2);
     expect(countByType(ultronFateDeck, 'event')).toBe(1);
   });
-  it('keeps proprietary content out of the repo', () => {
-    expectNoProprietaryContent(ultronFateDeck);
+  it('carries printed name + text on every card', () => {
+    expectFullCardData(ultronFateDeck);
   });
 });
 
@@ -192,8 +202,8 @@ describe('Taskmaster villain deck (30 cards)', () => {
     expect(countByType(taskmasterDeck, 'item')).toBe(8);
     expect(countByType(taskmasterDeck, 'specialty')).toBe(2);
   });
-  it('keeps proprietary content out of the repo', () => {
-    expectNoProprietaryContent(taskmasterDeck);
+  it('carries printed name + text on every card', () => {
+    expectFullCardData(taskmasterDeck);
   });
 });
 
@@ -206,7 +216,7 @@ describe('Taskmaster villain Fate deck (11 cards)', () => {
     expect(countByType(taskmasterFateDeck, 'fateEffect')).toBe(4);
     expect(countByType(taskmasterFateDeck, 'event')).toBe(1);
   });
-  it('keeps proprietary content out of the repo', () => {
-    expectNoProprietaryContent(taskmasterFateDeck);
+  it('carries printed name + text on every card', () => {
+    expectFullCardData(taskmasterFateDeck);
   });
 });

@@ -12,6 +12,7 @@ import { PassDeviceCurtain } from '../ui/components/PassDeviceCurtain';
 import { ActionMenu } from '../ui/components/ActionMenu';
 import { ObjectiveTracker } from '../ui/components/ObjectiveTracker';
 import { AdvisorPanel } from '../ui/components/AdvisorPanel';
+import { AdvisorGuideContext, useAdvisorGuideState } from '../ui/hooks/useAdvisorGuide';
 
 function MainMenu(): JSX.Element {
   return (
@@ -63,31 +64,34 @@ function VillainPicker(): JSX.Element {
 
 function GameScreen(): JSX.Element {
   const { engine, clear } = useEngineCtx();
+  const guide = useAdvisorGuideState();
   if (!engine) return <Navigate to="/" replace />;
   return (
-    <main className="screen screen--game">
-      <header className="game-header">
-        <h2 className="title title--small">Marvel Villainous</h2>
-        <button
-          className="button"
-          onClick={() => {
-            clear();
-          }}
-        >
-          Quit
-        </button>
-      </header>
-      <Board />
-      <TurnControls />
-      <ActionMenu />
-      <AdvisorPanel />
-      <ObjectiveTracker />
-      <Hand />
-      <FatePanel />
-      <Log />
-      <PassDeviceCurtain />
-      <WinScreen />
-    </main>
+    <AdvisorGuideContext.Provider value={guide}>
+      <main className="screen screen--game">
+        <header className="game-header">
+          <h2 className="title title--small">Marvel Villainous</h2>
+          <button
+            className="button"
+            onClick={() => {
+              clear();
+            }}
+          >
+            Quit
+          </button>
+        </header>
+        <Board />
+        <TurnControls />
+        <ActionMenu />
+        <AdvisorPanel />
+        <ObjectiveTracker />
+        <Hand />
+        <FatePanel />
+        <Log />
+        <PassDeviceCurtain />
+        <WinScreen />
+      </main>
+    </AdvisorGuideContext.Provider>
   );
 }
 

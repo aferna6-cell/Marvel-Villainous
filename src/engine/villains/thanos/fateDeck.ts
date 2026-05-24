@@ -1,13 +1,10 @@
-// THANOS villain Fate deck — 11 cards (rulebook + Marvel Villainous Wiki).
+// THANOS villain Fate deck — 11 cards.
 //
-// Composition (per the Thanos wiki page + per-card infoboxes):
+// Composition:
 //   4 Heroes — Adam Warlock (str 6); Drax the Destroyer (str 5);
 //              Gamora (str 3); Nebula (str 3)
 //   6 Effects — A Stone Is Found ×3; What Did It Cost? ×3
-//   1 Event  — Sacrifices Must Be Made (Event strength 7)
-//
-// Per the project's §0 ground rules `name` and `text` stay blank in the
-// repo — mechanical metadata only.
+//   1 Event  — Sacrifices Must Be Made (strength 7)
 
 import type { CardDef } from '../../types';
 
@@ -17,88 +14,89 @@ function copies(prefix: string, n: number, base: Omit<CardDef, 'id'>): CardDef[]
 
 export const thanosFateDeck: CardDef[] = [
   // ----- 4 Heroes -----------------------------------------------------------
-  // Adam Warlock — Hero; strength 6 (Thanos cannot win while Adam is in his Domain — CHUNK 7+)
   {
     id: 'fate-thanos-adam-warlock',
     villain: 'fate-thanos',
-    name: '',
+    name: 'Adam Warlock',
     type: 'hero',
     cost: 0,
     strength: 6,
-    effects: [],
-    tags: [],
+    text: 'While ADAM WARLOCK is in his Domain, Thanos cannot perform the Snap.',
+    effects: [{ op: 'villainSpecific', key: 'thanos.fate.adamWarlock.blockSnap', payload: null }],
+    tags: ['avenger'],
     icons: [],
   },
-  // Drax the Destroyer — Hero; strength 5 (rulebook: requires ≥2 Allies to Vanquish — CHUNK 7+)
   {
     id: 'fate-thanos-drax',
     villain: 'fate-thanos',
-    name: '',
+    name: 'Drax the Destroyer',
     type: 'hero',
     cost: 0,
     strength: 5,
-    effects: [],
-    tags: [],
+    text: 'DRAX requires at least 2 Allies to Vanquish.',
+    effects: [{ op: 'villainSpecific', key: 'thanos.fate.drax.minAllies', payload: { min: 2 } }],
+    tags: ['guardian'],
     icons: [],
   },
-  // Gamora — Hero; strength 3 (rulebook: can defeat an Ally / Hero / Rival / Variant — CHUNK 7+)
   {
     id: 'fate-thanos-gamora',
     villain: 'fate-thanos',
-    name: '',
+    name: 'Gamora',
     type: 'hero',
     cost: 0,
     strength: 3,
-    effects: [],
-    tags: [],
+    text: 'When GAMORA is played, defeat one of your Allies at her location (if any).',
+    effects: [{ op: 'villainSpecific', key: 'thanos.fate.gamora.defeatAlly', payload: null }],
+    tags: ['guardian'],
     icons: [],
   },
-  // Nebula — Hero; strength 3 (rulebook: gains +1 Strength tokens equal to Stones — CHUNK 7+)
   {
     id: 'fate-thanos-nebula',
     villain: 'fate-thanos',
-    name: '',
+    name: 'Nebula',
     type: 'hero',
     cost: 0,
     strength: 3,
-    effects: [],
-    tags: [],
+    text: 'NEBULA gains +1 Strength for each Infinity Stone Thanos has collected.',
+    effects: [{ op: 'villainSpecific', key: 'thanos.fate.nebula.boostPerStone', payload: null }],
+    tags: ['guardian'],
     icons: [],
   },
 
   // ----- 6 Effects ---------------------------------------------------------
-  // A Stone Is Found — ×3; Effect (targeted Villain takes a random Stone — CHUNK 7+ villainSpecific)
   ...copies('fate-thanos-stone-is-found', 3, {
     villain: 'fate-thanos',
-    name: '',
+    name: 'A Stone Is Found',
     type: 'fateEffect',
     cost: 0,
+    text: 'Take a random Infinity Stone from Thanos and return it to the Infinity Well.',
     effects: [{ op: 'villainSpecific', key: 'thanos.fate.stoneIsFound', payload: null }],
     tags: [],
     icons: [],
   }),
-  // What Did It Cost? — ×3; Effect (CHUNK 7+ villainSpecific)
   ...copies('fate-thanos-what-did-it-cost', 3, {
     villain: 'fate-thanos',
-    name: '',
+    name: 'What Did It Cost?',
     type: 'fateEffect',
     cost: 0,
+    text: 'Thanos discards 2 cards from his hand.',
     effects: [{ op: 'villainSpecific', key: 'thanos.fate.whatDidItCost', payload: null }],
     tags: [],
     icons: [],
   }),
 
   // ----- 1 Event -----------------------------------------------------------
-  // Sacrifices Must Be Made — Event; strength 7 (start-of-turn cost per Ally — CHUNK 7+)
   {
     id: 'fate-thanos-sacrifices-must-be-made',
     villain: 'fate-thanos',
-    name: '',
+    name: 'Sacrifices Must Be Made',
     type: 'event',
     cost: 0,
     strength: 7,
-    effects: [],
+    text: 'At the start of his turn, Thanos must discard 1 Ally from his Domain or lose 2 Power.',
+    effects: [{ op: 'villainSpecific', key: 'thanos.fate.sacrifices.startOfTurn', payload: null }],
     tags: [],
     icons: [],
+    targetedVillain: 'thanos',
   },
 ];

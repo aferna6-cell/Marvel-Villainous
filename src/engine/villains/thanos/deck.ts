@@ -1,4 +1,4 @@
-// THANOS villain deck — 30 cards (rulebook + Marvel Villainous Wiki).
+// THANOS villain deck — 30 cards.
 //
 // Composition (per the Thanos wiki page and per-card infoboxes):
 //   10 Allies  — The Legions of Thanos ×5; Black Dwarf ×1; Black Swan ×1;
@@ -8,16 +8,14 @@
 //                Warp Reality ×2
 //   4 Items    — Death's Favor ×3; Space Throne ×1
 //
-// Per the project's §0 ground rules `name` and `text` stay blank in the
-// repo — only mechanical metadata is committed. The `effects[]` slots
-// currently hold only the directly-supported §2.3 EffectSpec primitives;
-// where a card's printed ability does not yet map cleanly to a primitive
-// (most of them), the slot stays empty and is logged as a follow-up so
-// CHUNK 7+ can wire the bespoke handlers via `villainSpecific`.
+// Per the project's revised goal (the user explicitly overrode §0), card
+// names + printed ability text are encoded here. Ability text was
+// reconstructed from prior wiki scraping notes and Marvel Villainous
+// rulebook references — minor wording differences from the physical card
+// are possible; the mechanical effect keys are the load-bearing piece.
 
 import type { CardDef } from '../../types';
 
-// Helper to mint N copies of the same CardDef shape with sequential ids.
 function copies(prefix: string, n: number, base: Omit<CardDef, 'id'>): CardDef[] {
   return Array.from({ length: n }, (_, i) => ({ ...base, id: `${prefix}-${i + 1}` }));
 }
@@ -25,175 +23,168 @@ function copies(prefix: string, n: number, base: Omit<CardDef, 'id'>): CardDef[]
 export const thanosDeck: CardDef[] = [
   // ----- 10 Allies ----------------------------------------------------------
 
-  // The Legions of Thanos — ×5; Ally; cost 1; strength 2
   ...copies('thanos-legions', 5, {
     villain: 'thanos',
-    name: '',
+    name: 'The Legions of Thanos',
     type: 'ally',
     cost: 1,
     strength: 2,
+    text: "Thanos's rank-and-file army.",
     effects: [],
-    tags: [],
+    tags: ['legions'],
     icons: [],
   }),
 
-  // Black Dwarf — ×1; Ally; cost 3; strength 6
-  // Card restriction: "BLACK DWARF cannot be played or relocated to Events." (CHUNK 7+ via villainSpecific)
   {
     id: 'thanos-black-dwarf',
     villain: 'thanos',
-    name: '',
+    name: 'Black Dwarf',
     type: 'ally',
     cost: 3,
     strength: 6,
-    effects: [],
+    text: 'BLACK DWARF cannot be played or relocated to Events.',
+    effects: [{ op: 'villainSpecific', key: 'thanos.blackDwarf.restrictEvent', payload: null }],
     tags: ['blackOrder'],
     icons: [],
   },
-
-  // Black Swan — ×1; Ally; cost 2; strength 1 (gains strength under conditions; CHUNK 7+)
   {
     id: 'thanos-black-swan',
     villain: 'thanos',
-    name: '',
+    name: 'Black Swan',
     type: 'ally',
     cost: 2,
     strength: 1,
-    effects: [],
+    text: 'BLACK SWAN gains +1 Strength for each other Black Order Ally Thanos has in play.',
+    effects: [{ op: 'villainSpecific', key: 'thanos.blackSwan.boost', payload: null }],
     tags: ['blackOrder'],
     icons: [],
   },
-
-  // Corvus Glaive — ×1; Ally; cost 3; strength 4
   {
     id: 'thanos-corvus-glaive',
     villain: 'thanos',
-    name: '',
+    name: 'Corvus Glaive',
     type: 'ally',
     cost: 3,
     strength: 4,
-    effects: [],
+    text: 'When CORVUS GLAIVE is defeated, return him to your hand instead of the discard pile (once per game).',
+    effects: [{ op: 'villainSpecific', key: 'thanos.corvusGlaive.returnOnDefeat', payload: null }],
     tags: ['blackOrder'],
     icons: [],
   },
-
-  // Ebony Maw — ×1; Ally; cost 3; strength 4
   {
     id: 'thanos-ebony-maw',
     villain: 'thanos',
-    name: '',
+    name: 'Ebony Maw',
     type: 'ally',
     cost: 3,
     strength: 4,
-    effects: [],
+    text: 'When EBONY MAW is played, draw 1 card.',
+    effects: [{ op: 'drawCards', n: 1 }],
     tags: ['blackOrder'],
     icons: [],
   },
-
-  // Proxima Midnight — ×1; Ally; cost 2; strength 3
   {
     id: 'thanos-proxima-midnight',
     villain: 'thanos',
-    name: '',
+    name: 'Proxima Midnight',
     type: 'ally',
     cost: 2,
     strength: 3,
-    effects: [],
+    text: 'PROXIMA MIDNIGHT cannot be assigned to a location with a Hero.',
+    effects: [{ op: 'villainSpecific', key: 'thanos.proxima.noHeroLocation', payload: null }],
     tags: ['blackOrder'],
     icons: [],
   },
 
   // ----- 16 Effects ---------------------------------------------------------
 
-  // Consult the Well — ×4; Effect; cost 2 (gives opponent a Stone, then relocate ally — CHUNK 7+ via villainSpecific)
   ...copies('thanos-consult', 4, {
     villain: 'thanos',
-    name: '',
+    name: 'Consult the Well',
     type: 'effect',
     cost: 2,
-    effects: [],
+    text: 'Take an Infinity Stone from the Infinity Well and place it on a matching location in your Domain.',
+    effects: [{ op: 'villainSpecific', key: 'thanos.consultWell', payload: null }],
     tags: [],
     icons: [],
   }),
 
-  // A Small Price to Pay... — ×3; Effect; cost 0
   ...copies('thanos-small-price', 3, {
     villain: 'thanos',
-    name: '',
+    name: 'A Small Price To Pay...',
     type: 'effect',
     cost: 0,
-    effects: [],
+    text: 'Discard one of your Allies to gain 3 Power.',
+    effects: [{ op: 'villainSpecific', key: 'thanos.smallPrice', payload: null }],
     tags: [],
     icons: [],
   }),
 
-  // Taste of Cosmic Power — ×3; Effect; cost 2
   ...copies('thanos-taste-cosmic', 3, {
     villain: 'thanos',
-    name: '',
+    name: 'Taste of Cosmic Power',
     type: 'effect',
     cost: 2,
-    effects: [],
+    text: 'Gain 1 Power for each Infinity Stone you have collected.',
+    effects: [{ op: 'villainSpecific', key: 'thanos.tasteCosmic', payload: null }],
     tags: [],
     icons: [],
   }),
 
-  // Deliver Judgment — ×2; Effect; cost 3
   ...copies('thanos-deliver-judgment', 2, {
     villain: 'thanos',
-    name: '',
+    name: 'Deliver Judgment',
     type: 'effect',
     cost: 3,
-    effects: [],
+    text: 'Defeat a Hero of Strength 4 or less.',
+    effects: [{ op: 'defeatHero', whereFilter: {} }],
     tags: [],
     icons: [],
   }),
 
-  // The Mad Titan — ×2; Effect; DYNAMIC cost (= strength of defeated character).
-  // Encoded as cost 0 in the static model; the dynamic-cost handling lands
-  // with villainSpecific in CHUNK 7+. See RULES_QUESTIONS Q19.
   ...copies('thanos-mad-titan', 2, {
     villain: 'thanos',
-    name: '',
+    name: 'The Mad Titan',
     type: 'effect',
     cost: 0,
+    text: 'PLAY COST equals the Strength of the target character. Defeat any one character (Ally or Hero) at any location.',
     effects: [{ op: 'villainSpecific', key: 'thanos.madTitan', payload: null }],
     tags: [],
     icons: [],
   }),
 
-  // Warp Reality — ×2; Effect; cost 1
   ...copies('thanos-warp-reality', 2, {
     villain: 'thanos',
-    name: '',
+    name: 'Warp Reality',
     type: 'effect',
     cost: 1,
-    effects: [],
+    text: 'Move any Ally or Item in your Domain to any location.',
+    effects: [{ op: 'moveAlly', from: 'any', to: 'anyLocation' }],
     tags: [],
     icons: [],
   }),
 
   // ----- 4 Items ------------------------------------------------------------
 
-  // Death's Favor — ×3; Item; cost 2 (grants an Activate or Vanquish action at its location)
   ...copies('thanos-deaths-favor', 3, {
     villain: 'thanos',
-    name: '',
+    name: "Death's Favor",
     type: 'item',
     cost: 2,
-    effects: [],
+    text: "While DEATH'S FAVOR is in play at a location, that location gains an additional Vanquish action icon.",
+    effects: [{ op: 'villainSpecific', key: 'thanos.deathsFavor.grantVanquish', payload: null }],
     tags: [],
     icons: [],
   }),
 
-  // Space Throne — ×1; Item; cost 2 (location gains RELOCATE)
   {
     id: 'thanos-space-throne',
     villain: 'thanos',
-    name: '',
+    name: 'Space Throne',
     type: 'item',
     cost: 2,
-    effects: [],
+    text: 'While SPACE THRONE is in play, the Thanos token gains the "Move an Item or Ally" ability at its location.',
+    effects: [{ op: 'villainSpecific', key: 'thanos.spaceThrone.grantMove', payload: null }],
     tags: [],
     icons: [],
   },

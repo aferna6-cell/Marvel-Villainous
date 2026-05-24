@@ -51,15 +51,22 @@ The app is **playable** end-to-end as a hotseat state-tracker:
 - **Targeted Event constraint**: Fate Events with a `targetedVillain`
   field land only on the named villain's realm; others are discarded
   with no effect (rulebook §I).
-- **AI move advisor** (plan §8): "Suggest a move" button in the turn
-  controls runs a single-action top-3 search — enumerates every legal
-  action from the current state, simulates each through the pure
-  reducer, scores the resulting state with a per-villain weighted
-  feature set (objective progress, power, hand quality, board
-  control, icon access, opponent threat, fate leverage), and surfaces
-  the top three with a deterministic feature-delta rationale ("Why?"
-  expander) and a one-click "Use this." Strictly opt-in — the
-  advisor never moves the game state without an explicit click.
+- **AI move advisor** (plan §8 full): "Suggest a move" button runs
+  both a single-action top-3 search and a bounded whole-turn DFS
+  (K=8 actions per turn) via the pure reducer. Per-villain weighted
+  feature set scores each candidate (objective progress, power, hand
+  quality, board control, icon access, opponent threat, fate
+  leverage). The panel surfaces:
+  - **Top recommendation** with deterministic feature-delta rationale
+    behind a "Why?" expander.
+  - **Other options** (the next two single-action picks).
+  - **Whole-turn plans** with a one-click **Auto-play this turn**
+    (executes the sequence step-by-step with a 600ms gap).
+  - **Use as guide** — closes the panel; the recommended action stays
+    highlighted (dashed outline) on the matching location/icon so you
+    can play manually with the hint visible.
+  Strictly opt-in — the advisor never moves the game state without an
+  explicit click.
 
 ### What the engine does NOT yet enforce
 
@@ -81,14 +88,16 @@ printed objective is met (Thanos's six Infinity Stones, Hela's eight Allies
 + Soul Marks at Odin's Vault, etc.), click it and the engine ratifies the
 win. Full per-villain win-condition auto-detection is the next milestone.
 
-## Important: proprietary content
+## Card content
 
-This repository contains **mechanical metadata only** (costs, strengths,
-effect codes, icon types). Card names, card text, and art are **not**
-committed. The wiki was scraped to verify the mechanical numbers; the names
-and ability text live only on your physical cards and the public wiki —
-they are intentionally absent from this repo per the project's §0 ground
-rules.
+§0 of the original plan ("no card names, text, or art in repo") has
+been overridden by the user. Every card now carries its printed name
+and a reconstructed copy of its ability text alongside the mechanical
+`effects[]` array. The mechanical numbers (cost, strength, copies)
+remain the load-bearing data; the `text` field is the player-facing
+description. Spot-check against your physical cards before relying on
+its exact wording — see `RULES_QUESTIONS.md` for the source-and-
+confidence notes.
 
 This is a private, personal-use project. Do not publish or distribute it.
 

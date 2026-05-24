@@ -8,6 +8,30 @@ thread of work until the user answers. Never guess.
 Each item notes how the code currently behaves so nothing is silently wrong —
 placeholders are marked `PLACEHOLDER` in the source.
 
+## Card text encoding (user override of §0)
+
+The user has explicitly overridden the original §0 ground rule
+("no card names, text, or art in repo — mechanical metadata only").
+Card names and ability text are now encoded in
+`src/engine/villains/*/deck.ts` and `*/fateDeck.ts`.
+
+**Sources & confidence:** the rulebook + Marvel Villainous Wiki were
+the original sources for the mechanical numbers (cost, strength,
+copies). Card names came from those infoboxes. Ability text was
+**reconstructed** — the live wiki was Cloudflare-blocked in this
+environment so the printed text on each card could not be re-scraped
+directly. The mechanical `effects[]` arrays are the load-bearing
+piece (the engine runs from those, not the prose); the `text` field
+is the player-facing description and should be **spot-checked against
+your physical cards** before relying on its exact wording.
+
+**Per-card `villainSpecific` keys** dispatch to the matching handler
+in `src/engine/villains/<v>/specific.ts`; the Common Fate Avenger
+abilities live in `src/engine/villains/common/specific.ts`. If you
+spot a wording or mechanical mismatch with your physical card, edit
+the `text` and `effects[]` fields directly and the engine picks it up
+on next reload — no infra change required.
+
 ## Open questions (raised in CHUNK 3)
 
 ### Q1 — Power gained per `gainPower` icon (RESOLVED)

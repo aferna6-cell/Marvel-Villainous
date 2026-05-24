@@ -7,7 +7,9 @@
 // an explicit click — it never moves the game state itself.
 
 import { searchTopK, type Candidate } from './search';
+import { searchSequences, type Sequence } from './sequenceSearch';
 import { explain } from './explain';
+import { describeAction } from './explain';
 import type { Action, GameState, PlayerId } from '../types';
 
 export interface Recommendation {
@@ -25,7 +27,7 @@ export function suggestMove(state: GameState, asPlayer: PlayerId): Recommendatio
   return { action: top.action, rationale: explain(top), score: top.score };
 }
 
-/** Top-K recommendations, sorted by score descending. */
+/** Top-K single-action recommendations, sorted by score descending. */
 export function suggestTopK(
   state: GameState,
   asPlayer: PlayerId,
@@ -40,4 +42,41 @@ export function suggestTopK(
   }));
 }
 
-export type { Candidate };
+export interface SequenceRecommendation {
+  /** Step-by-step action plan from now through end-of-turn. */
+  steps: { action: Action; description: string; score: number }[];
+  /** Final state value at the end of the sequence. */
+  score: number;
+  /** Whether the sequence actually rotates to the next player. */
+  turnEnded: boolean;
+  /** Short bullets explaining the plan (action highlights). */
+  rationale: string[];
+}
+
+/**
+ * Plan §8.1 whole-turn search: returns the top-K full-turn action
+ * sequences for the active player. Each sequence is a list of Actions
+ * that can be dispatched in order; the UI's "Auto-play this turn"
+ * fires them one at a time with a small delay so the player can watch.
+ */
+export function suggestTurnSequences(
+  state: GameState,
+  asPlayer: PlayerId,
+  k = 3,
+): SequenceRecommendation[] {
+  if (state.winner !== null) return [];
+  if (state.activePlayer !== asPlayer) return [];
+  const seqs: Sequence[] = searchSequences(state, asPlayer, { topK: k });
+  return seqs.map((seq) => ({
+    steps: seq.steps.map((s) => ({
+      action: s.action,
+      description: describeAction(s.action),
+      score: s.score,
+    })),
+    score: seq.score,
+    turnEnded: seq.turnEnded,
+    rationale: seq.steps.slice(0, 4).map((s, i) => `${i + 1}. ${describeAction(s.action)}`),
+  }));
+}
+
+export type { Candidate, Sequence };

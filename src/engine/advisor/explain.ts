@@ -8,7 +8,7 @@ import { getCard } from '../cards/registry';
 import type { Action } from '../types';
 import type { Candidate } from './search';
 
-function describeAction(a: Action): string {
+export function describeAction(a: Action): string {
   switch (a.kind) {
     case 'startTurn': return 'Start your turn.';
     case 'moveVillain': return `Move your villain to location ${a.to + 1}.`;

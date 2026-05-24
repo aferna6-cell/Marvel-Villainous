@@ -1,5 +1,7 @@
 import type { DragEvent, MouseEvent } from 'react';
+import { useContext } from 'react';
 import { useEngine, useGameState } from '../hooks/useGameEngine';
+import { AdvisorGuideContext } from '../hooks/useAdvisorGuide';
 import type { InstanceId, Location as LocationT, LocationIndex, PlayerId } from '../../engine/types';
 
 interface LocationProps {
@@ -15,6 +17,12 @@ interface LocationProps {
 export function Location({ location, index, owner, readOnly = false }: LocationProps): JSX.Element {
   const engine = useEngine();
   const state = useGameState();
+  const guide = useContext(AdvisorGuideContext);
+  const hl = guide?.highlighted ?? null;
+  const isHlMove = hl?.kind === 'moveVillain' && hl.to === index;
+  const isHlPlay = hl?.kind === 'playCard'; // any location
+  const isHlIcon = (iconIndex: number): boolean =>
+    hl?.kind === 'useIcon' && hl.location === index && hl.iconIndex === iconIndex;
   const active = state.players[state.activePlayer];
   if (!active) throw new Error('Location: active player missing');
   const isCurrent = !readOnly && active.realm.villainTokenAt === index;
@@ -78,6 +86,7 @@ export function Location({ location, index, owner, readOnly = false }: LocationP
     isCurrent ? 'location--current' : '',
     !readOnly && state.phase === 'move' ? 'location--movable' : '',
     readOnly ? 'location--readonly' : '',
+    !readOnly && (isHlMove || isHlPlay) ? 'location--advisor-hint' : '',
   ]
     .filter(Boolean)
     .join(' ');
@@ -95,7 +104,7 @@ export function Location({ location, index, owner, readOnly = false }: LocationP
           return (
             <button
               key={`top-${i}`}
-              className={`icon ${used ? 'icon--used' : ''}`}
+              className={`icon ${used ? 'icon--used' : ''} ${isHlIcon(i) ? 'icon--advisor-hint' : ''}`}
               disabled={used || state.phase !== 'actions' || !isCurrent}
               onClick={(e) => {
                 e.stopPropagation();
@@ -170,7 +179,7 @@ export function Location({ location, index, owner, readOnly = false }: LocationP
           return (
             <button
               key={`bot-${i}`}
-              className={`icon ${used ? 'icon--used' : ''}`}
+              className={`icon ${used ? 'icon--used' : ''} ${isHlIcon(iconIndex) ? 'icon--advisor-hint' : ''}`}
               disabled={
                 heroesCovering || used || state.phase !== 'actions' || !isCurrent
               }

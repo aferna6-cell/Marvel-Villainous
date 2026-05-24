@@ -631,6 +631,50 @@ button {
   gap: 0.5rem;
 }
 
+.advisor__sequences {
+  margin: 0.4rem 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+.advisor__sequence {
+  margin-bottom: 0.5rem;
+  padding: 0.35rem;
+  background: var(--bg-panel);
+  border-radius: 4px;
+}
+
+.advisor__sequence-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.advisor__sequence-steps {
+  margin: 0.3rem 0 0 1rem;
+  padding-left: 0.5rem;
+  color: var(--text-dim);
+  font-size: 0.8rem;
+}
+
+.location--advisor-hint {
+  outline: 2px dashed var(--accent);
+  outline-offset: 1px;
+  animation: advisor-hint-pulse 2s infinite;
+}
+
+.icon--advisor-hint {
+  outline: 2px dashed var(--accent);
+  outline-offset: 1px;
+  animation: advisor-hint-pulse 2s infinite;
+}
+
+@keyframes advisor-hint-pulse {
+  0%, 100% { outline-color: var(--accent); }
+  50% { outline-color: transparent; }
+}
+
 .objective-tracker {
   background: var(--bg-panel);
   border: 1px solid var(--accent-dim);
