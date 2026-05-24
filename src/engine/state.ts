@@ -17,6 +17,7 @@ import { applyDiscard } from './actions/discard';
 import { applyFate } from './actions/fate';
 import { applyDraw, applyEndTurn } from './actions/endTurn';
 import { applyClaimVictory } from './actions/claim';
+import { applyRelocateAlly } from './actions/relocate';
 import * as startOfTurn from './phases/startOfTurn';
 import * as mainPhase from './phases/mainPhase';
 import * as fatePhase from './phases/fatePhase';
@@ -127,6 +128,14 @@ export function reduce(state: GameState, action: Action): GameState {
       break;
     case 'claimVictory':
       next = applyClaimVictory(state);
+      break;
+    case 'relocateAlly':
+      next = applyRelocateAlly(
+        state,
+        action.fromLocation,
+        action.instanceId,
+        action.toLocation,
+      );
       break;
     default:
       return assertNever(action);

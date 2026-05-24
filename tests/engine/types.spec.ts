@@ -15,6 +15,7 @@ describe('Action union', () => {
       | 'resolvePrompt'
       | 'endTurn'
       | 'claimVictory'
+      | 'relocateAlly'
     >();
   });
 
@@ -58,6 +59,8 @@ describe('Action union', () => {
           return a.kind;
         case 'claimVictory':
           return a.kind;
+        case 'relocateAlly':
+          return `${a.fromLocation}->${a.toLocation}:${a.instanceId}`;
         default: {
           // If a new Action kind is added without a case above, `a` is no
           // longer `never` here and this assignment fails to compile.

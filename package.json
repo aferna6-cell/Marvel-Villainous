@@ -8,8 +8,8 @@
   "scripts": {
     "dev": "concurrently -k \"pnpm:dev:vite\" \"pnpm:dev:electron\"",
     "dev:vite": "vite",
-    "dev:electron": "tsc -p electron/tsconfig.json && wait-on tcp:5173 && electron .",
-    "build": "tsc -p tsconfig.json && vite build && tsc -p electron/tsconfig.json",
+    "dev:electron": "tsc -p electron/tsconfig.json && node -e \"require('fs').writeFileSync('dist-electron/package.json', JSON.stringify({type:'commonjs'}))\" && wait-on tcp:5173 && electron .",
+    "build": "tsc -p tsconfig.json && vite build && tsc -p electron/tsconfig.json && node -e \"require('fs').writeFileSync('dist-electron/package.json', JSON.stringify({type:'commonjs'}))\"",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint . --max-warnings 0",

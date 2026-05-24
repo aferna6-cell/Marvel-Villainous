@@ -119,6 +119,22 @@ button {
   width: 100%;
 }
 
+.board__global-event {
+  background: var(--danger);
+  color: var(--text);
+  padding: 0.4rem 0.75rem;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.board__global-event-label {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.75rem;
+  opacity: 0.85;
+}
+
 .realm {
   background: var(--bg-panel);
   border: 1px solid var(--accent-dim);

@@ -2,8 +2,8 @@ import { useGameState } from '../hooks/useGameEngine';
 import { Realm } from './Realm';
 
 /**
- * The active player's realm. CHUNK 5 only shows one realm (Thanos in M2);
- * multi-realm layouts arrive when more villains land.
+ * The active player's realm. A small banner above shows the central play
+ * area (Global Event slot, rulebook §I).
  */
 export function Board(): JSX.Element {
   const state = useGameState();
@@ -11,6 +11,12 @@ export function Board(): JSX.Element {
   if (!active) throw new Error('Board: active player missing');
   return (
     <section className="board">
+      {state.globalEvent ? (
+        <div className="board__global-event" role="status">
+          <span className="board__global-event-label">Global Event in play:</span>{' '}
+          <strong>{state.globalEvent.cardId}</strong>
+        </div>
+      ) : null}
       <Realm realm={active.realm} />
     </section>
   );

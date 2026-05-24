@@ -7,7 +7,7 @@ import { useEngine, useGameState } from '../hooks/useGameEngine';
 import { getCard } from '../../engine/cards/registry';
 import type { CardId, LocationIndex } from '../../engine/types';
 
-type Mode = 'closed' | 'vanquish' | 'discard';
+type Mode = 'closed' | 'vanquish' | 'discard' | 'relocate';
 
 export function ActionMenu(): JSX.Element {
   const engine = useEngine();
@@ -40,6 +40,13 @@ export function ActionMenu(): JSX.Element {
           Discard
         </button>
         <button
+          className="button"
+          disabled={!canAct}
+          onClick={() => setMode(mode === 'relocate' ? 'closed' : 'relocate')}
+        >
+          Relocate ally
+        </button>
+        <button
           className="button button--danger"
           disabled={state.winner !== null}
           onClick={() => {
@@ -54,7 +61,75 @@ export function ActionMenu(): JSX.Element {
       </div>
       {mode === 'vanquish' ? <VanquishPanel onClose={() => setMode('closed')} /> : null}
       {mode === 'discard' ? <DiscardPanel onClose={() => setMode('closed')} /> : null}
+      {mode === 'relocate' ? <RelocatePanel onClose={() => setMode('closed')} /> : null}
     </section>
+  );
+}
+
+function RelocatePanel({ onClose }: { onClose: () => void }): JSX.Element {
+  const engine = useEngine();
+  const state = useGameState();
+  const active = state.players[state.activePlayer];
+  if (!active) throw new Error('RelocatePanel: active player missing');
+
+  const [selection, setSelection] = useState<{ fromLocation: LocationIndex; instanceId: string } | null>(null);
+
+  const allies: { fromLocation: LocationIndex; instanceId: string; cardId: CardId }[] = [];
+  active.realm.locations.forEach((loc, i) => {
+    for (const a of loc.alliesPresent) {
+      allies.push({ fromLocation: i as LocationIndex, instanceId: a.instanceId, cardId: a.cardId });
+    }
+  });
+
+  const submit = (to: LocationIndex): void => {
+    if (!selection) return;
+    try {
+      engine.dispatch({
+        kind: 'relocateAlly',
+        fromLocation: selection.fromLocation,
+        instanceId: selection.instanceId,
+        toLocation: to,
+      });
+      onClose();
+    } catch (e) {
+      alert(String(e));
+    }
+  };
+
+  return (
+    <div className="action-panel" role="dialog" aria-label="Relocate">
+      <h4>Relocate an ally</h4>
+      {allies.length === 0 ? (
+        <p>No allies in your realm.</p>
+      ) : !selection ? (
+        <>
+          <p>Select the ally:</p>
+          {allies.map((a) => (
+            <button
+              key={a.instanceId}
+              className="button"
+              onClick={() => setSelection({ fromLocation: a.fromLocation, instanceId: a.instanceId })}
+            >
+              {a.cardId} (loc {a.fromLocation + 1})
+            </button>
+          ))}
+        </>
+      ) : (
+        <>
+          <p>Select the destination location:</p>
+          {([0, 1, 2, 3] as LocationIndex[])
+            .filter((i) => i !== selection.fromLocation)
+            .map((i) => (
+              <button key={i} className="button" onClick={() => submit(i)}>
+                Location {i + 1}
+              </button>
+            ))}
+        </>
+      )}
+      <button className="button" onClick={onClose}>
+        Cancel
+      </button>
+    </div>
   );
 }
 

@@ -295,7 +295,13 @@ export type Action =
   | { kind: 'fate' }
   | { kind: 'resolvePrompt'; choice: PromptChoice }
   | { kind: 'endTurn' }
-  | { kind: 'claimVictory' };
+  | { kind: 'claimVictory' }
+  /**
+   * Relocate one of your own Allies or Items between two locations in your
+   * own Domain (rulebook §7 Relocate). The Move-an-Item-or-Ally action icon
+   * permits this freely; cards can also grant it.
+   */
+  | { kind: 'relocateAlly'; fromLocation: LocationIndex; instanceId: InstanceId; toLocation: LocationIndex };
 
 export type ActionKind = Action['kind'];
 

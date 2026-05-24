@@ -39,6 +39,14 @@ export function TurnControls(): JSX.Element {
           Power: <strong>{active.power}</strong>
         </span>
         <span>
+          Hand: <strong>{active.hand.length}</strong> · Deck:{' '}
+          <strong>{active.deck.length}</strong>
+        </span>
+        <span>
+          Fate deck: <strong>{state.fateDeck.length}</strong> (discard{' '}
+          {state.fateDiscard.length})
+        </span>
+        <span>
           Turn: <strong>{state.turn}</strong>
         </span>
       </div>

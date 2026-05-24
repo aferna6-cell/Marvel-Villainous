@@ -193,6 +193,21 @@ export function isLegal(state: GameState, action: Action): Legality {
       // by setting `state.winner`; opponents can dispute via Quit.
       return true;
 
+    case 'relocateAlly': {
+      if (state.phase !== 'actions') return illegal('can only relocate during the actions phase');
+      if (action.fromLocation === action.toLocation) {
+        return illegal('the destination must be a different location');
+      }
+      const player = activePlayerState(state);
+      const from = player.realm.locations[action.fromLocation];
+      if (!from) return illegal('no such source location');
+      const dest = player.realm.locations[action.toLocation];
+      if (!dest) return illegal('no such destination location');
+      const ally = from.alliesPresent.find((a) => a.instanceId === action.instanceId);
+      if (!ally) return illegal('that ally is not at the source location');
+      return true;
+    }
+
     default:
       return assertNever(action);
   }
