@@ -301,7 +301,14 @@ export type Action =
    * own Domain (rulebook §7 Relocate). The Move-an-Item-or-Ally action icon
    * permits this freely; cards can also grant it.
    */
-  | { kind: 'relocateAlly'; fromLocation: LocationIndex; instanceId: InstanceId; toLocation: LocationIndex };
+  | { kind: 'relocateAlly'; fromLocation: LocationIndex; instanceId: InstanceId; toLocation: LocationIndex }
+  /**
+   * Free-form objective-progress edit. Card-ability auto-wiring hasn't
+   * landed yet, so players use this to tally objective tokens by hand
+   * (Infinity Stones, Soul Marks, Upgrade level, defeated bosses, contracts).
+   * The engine then auto-detects the per-villain win condition.
+   */
+  | { kind: 'setObjectiveCount'; player: PlayerId; key: string; delta: number };
 
 export type ActionKind = Action['kind'];
 

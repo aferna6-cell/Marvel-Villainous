@@ -17,6 +17,7 @@ import { applyDiscard } from './actions/discard';
 import { applyFate } from './actions/fate';
 import { applyDraw, applyEndTurn } from './actions/endTurn';
 import { applyClaimVictory } from './actions/claim';
+import { applySetObjectiveCount, checkWin } from './actions/objective';
 import { applyRelocateAlly } from './actions/relocate';
 import * as startOfTurn from './phases/startOfTurn';
 import * as mainPhase from './phases/mainPhase';
@@ -137,12 +138,30 @@ export function reduce(state: GameState, action: Action): GameState {
         action.toLocation,
       );
       break;
+    case 'setObjectiveCount':
+      next = applySetObjectiveCount(state, action.player, action.key, action.delta);
+      break;
     default:
       return assertNever(action);
   }
 
   next = drainTriggers(next);
   next = autoAdvance(next);
+  // Auto-detect a per-villain win from the player's objective counts.
+  if (next.winner === null) {
+    const winner = checkWin(next);
+    if (winner) {
+      const s = cloneState(next);
+      s.winner = winner;
+      const villain = s.players[winner]?.villain ?? '?';
+      s.log.push({
+        turn: s.turn,
+        player: winner,
+        message: `${winner} (${villain}) reached the objective — VICTORY`,
+      });
+      next = s;
+    }
+  }
   return next;
 }
 

@@ -10,6 +10,8 @@ import { FatePanel } from '../ui/components/FatePanel';
 import { WinScreen } from '../ui/components/WinScreen';
 import { PassDeviceCurtain } from '../ui/components/PassDeviceCurtain';
 import { ActionMenu } from '../ui/components/ActionMenu';
+import { ObjectiveTracker } from '../ui/components/ObjectiveTracker';
+import { AdvisorPanel } from '../ui/components/AdvisorPanel';
 
 function MainMenu(): JSX.Element {
   return (
@@ -78,6 +80,8 @@ function GameScreen(): JSX.Element {
       <Board />
       <TurnControls />
       <ActionMenu />
+      <AdvisorPanel />
+      <ObjectiveTracker />
       <Hand />
       <FatePanel />
       <Log />

@@ -16,6 +16,7 @@ describe('Action union', () => {
       | 'endTurn'
       | 'claimVictory'
       | 'relocateAlly'
+      | 'setObjectiveCount'
     >();
   });
 
@@ -61,6 +62,8 @@ describe('Action union', () => {
           return a.kind;
         case 'relocateAlly':
           return `${a.fromLocation}->${a.toLocation}:${a.instanceId}`;
+        case 'setObjectiveCount':
+          return `${a.player}:${a.key}:${a.delta}`;
         default: {
           // If a new Action kind is added without a case above, `a` is no
           // longer `never` here and this assignment fails to compile.

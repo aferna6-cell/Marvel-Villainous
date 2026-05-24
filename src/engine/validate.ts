@@ -193,6 +193,12 @@ export function isLegal(state: GameState, action: Action): Legality {
       // by setting `state.winner`; opponents can dispute via Quit.
       return true;
 
+    case 'setObjectiveCount':
+      if (!state.playerOrder.includes(action.player)) {
+        return illegal('that player is not in this game');
+      }
+      return true;
+
     case 'relocateAlly': {
       if (state.phase !== 'actions') return illegal('can only relocate during the actions phase');
       if (action.fromLocation === action.toLocation) {

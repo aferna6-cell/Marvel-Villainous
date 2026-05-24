@@ -107,6 +107,26 @@ below cite the booklet's printed pagination as parsed from the PDF.
 | Empty Fate deck reshuffles from the Fate discard | `engine/actions/fate.ts` — `applyFate`   | (deck-exhaust convention)        |
 | Fate is triggered only via the Fate icon (no alternate trigger e.g. pay-to-Fate) | `engine/validate.ts` — `fateOpponent` case | Types of Actions — no alternate path listed |
 
+## Victory conditions (per-villain auto-detect)
+
+| Rule                                            | Code location                          | Rulebook citation               |
+| ------------------------------------------------ | ---------------------------------------- | -------------------------------- |
+| Thanos wins by collecting 6 Infinity Stones      | `engine/actions/objective.ts` — `checkWin` thanos branch | Thanos Objective |
+| Hela wins at 8 Allies+Soul Marks at Odin's Vault | `engine/actions/objective.ts` — `checkWin` hela branch   | Hela Objective   |
+| Killmonger wins by completing his boss sequence  | `engine/actions/objective.ts` — `checkWin` killmonger branch | Killmonger Objective |
+| Taskmaster wins by completing 4 contracts        | `engine/actions/objective.ts` — `checkWin` taskmaster branch | Taskmaster Objective |
+| Ultron wins at 4 upgrades + finalForm flag       | `engine/actions/objective.ts` — `checkWin` ultron branch | Ultron Objective |
+| `claimVictory` action lets a player ratify a win | `engine/actions/claim.ts` — `applyClaimVictory` | (escape hatch) |
+| `setObjectiveCount` action tallies progress      | `engine/actions/objective.ts` — `applySetObjectiveCount` | (player-tally) |
+
+## AI advisor (plan §8 stub)
+
+| Rule                                            | Code location                          | Notes                            |
+| ------------------------------------------------ | ---------------------------------------- | -------------------------------- |
+| `suggestMove` returns a heuristic recommendation | `engine/advisor/index.ts`              | minimal version; full enumeration + scoring per plan §8 is future work |
+| Advisor only suggests for the active player      | `engine/advisor/index.ts`              | per plan §8 — opt-in, every turn |
+| Every suggested action is checked against `isLegal` | `engine/advisor/index.ts`           | faithfulness guarantee per plan §8.5 |
+
 ## Engine mechanics
 
 | Rule                                            | Code location                          | Rulebook citation               |

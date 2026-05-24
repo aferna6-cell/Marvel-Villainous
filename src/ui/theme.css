@@ -155,6 +155,47 @@ button {
   gap: 0.5rem;
 }
 
+.realm--readonly {
+  opacity: 0.85;
+  filter: saturate(0.85);
+  margin-top: 0.25rem;
+}
+
+.realm--readonly .location {
+  min-height: 7rem;
+  cursor: default;
+}
+
+.realm--readonly .icon {
+  display: none;
+}
+
+.location--readonly {
+  cursor: default !important;
+}
+
+.board__opponents {
+  margin-top: 0.75rem;
+}
+
+.board__opponents-title {
+  margin: 0 0 0.4rem 0;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+}
+
+.board__opponent {
+  margin-bottom: 0.5rem;
+}
+
+.board__opponent-header {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  margin-bottom: 0.2rem;
+}
+
 .location {
   background: var(--bg-panel-2);
   border: 1px solid #3a2a47;
@@ -481,6 +522,87 @@ button {
   align-items: center;
   gap: 0.5rem;
   padding: 0.15rem 0;
+}
+
+.advisor {
+  background: var(--bg-panel);
+  border: 1px solid var(--accent-dim);
+  border-radius: 6px;
+  padding: 0.6rem 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.advisor__suggestion {
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background: var(--bg-panel-2);
+  border: 1px solid #463457;
+  border-radius: 5px;
+  font-size: 0.85rem;
+}
+
+.advisor__suggestion ul {
+  margin: 0.25rem 0;
+  padding-left: 1.25rem;
+  color: var(--text-dim);
+}
+
+.advisor__actions {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+
+.objective-tracker {
+  background: var(--bg-panel);
+  border: 1px solid var(--accent-dim);
+  border-radius: 6px;
+  padding: 0.6rem 0.75rem;
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.objective-tracker__title {
+  margin: 0 0 0.4rem 0;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+}
+
+.objective-tracker__row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.2rem 0;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.05);
+}
+
+.objective-tracker__player {
+  min-width: 8rem;
+  color: var(--text-dim);
+}
+
+.objective-tracker__step {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.objective-tracker__step--met {
+  color: var(--good);
+  font-weight: 600;
+}
+
+.objective-tracker__bump {
+  background: var(--bg-panel-2);
+  border: 1px solid #463457;
+  color: var(--text);
+  border-radius: 3px;
+  width: 1.5rem;
+  height: 1.5rem;
+  cursor: pointer;
 }
 
 .button--danger {
