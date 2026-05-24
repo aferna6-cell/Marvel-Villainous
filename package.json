@@ -15,7 +15,8 @@
     "lint": "eslint . --max-warnings 0",
     "format": "prettier --write .",
     "electron:dev": "pnpm dev",
-    "electron:build": "pnpm build && electron-builder"
+    "electron:build": "pnpm build && electron-builder",
+    "cards": "node --import tsx/esm scripts/gen-cards-catalog.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

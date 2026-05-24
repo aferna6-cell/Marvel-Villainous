@@ -99,6 +99,13 @@ description. Spot-check against your physical cards before relying on
 its exact wording — see `RULES_QUESTIONS.md` for the source-and-
 confidence notes.
 
+**Full catalog** — `CARDS.md` (auto-generated) lists every card with
+its name, type, cost, strength, printed text, and the mechanical
+effect the engine actually executes. Regenerate after edits with
+`pnpm cards`. The fix for a wrong row is a one-line edit in the
+matching `src/engine/villains/<v>/deck.ts` (or `fateDeck.ts`) for
+numbers/text, or in `specific.ts` for behavior.
+
 This is a private, personal-use project. Do not publish or distribute it.
 
 ## Development
