@@ -16,6 +16,7 @@ import { applyAttack } from './actions/attack';
 import { applyDiscard } from './actions/discard';
 import { applyFate } from './actions/fate';
 import { applyDraw, applyEndTurn } from './actions/endTurn';
+import { applyClaimVictory } from './actions/claim';
 import * as startOfTurn from './phases/startOfTurn';
 import * as mainPhase from './phases/mainPhase';
 import * as fatePhase from './phases/fatePhase';
@@ -123,6 +124,9 @@ export function reduce(state: GameState, action: Action): GameState {
       break;
     case 'endTurn':
       next = applyEndTurn(state);
+      break;
+    case 'claimVictory':
+      next = applyClaimVictory(state);
       break;
     default:
       return assertNever(action);

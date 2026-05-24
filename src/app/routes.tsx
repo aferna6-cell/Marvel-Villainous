@@ -7,6 +7,9 @@ import { Hand } from '../ui/components/Hand';
 import { TurnControls } from '../ui/components/TurnControls';
 import { Log } from '../ui/components/Log';
 import { FatePanel } from '../ui/components/FatePanel';
+import { WinScreen } from '../ui/components/WinScreen';
+import { PassDeviceCurtain } from '../ui/components/PassDeviceCurtain';
+import { ActionMenu } from '../ui/components/ActionMenu';
 
 function MainMenu(): JSX.Element {
   return (
@@ -74,9 +77,12 @@ function GameScreen(): JSX.Element {
       </header>
       <Board />
       <TurnControls />
+      <ActionMenu />
       <Hand />
       <FatePanel />
       <Log />
+      <PassDeviceCurtain />
+      <WinScreen />
     </main>
   );
 }

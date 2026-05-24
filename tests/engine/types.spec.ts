@@ -14,6 +14,7 @@ describe('Action union', () => {
       | 'fate'
       | 'resolvePrompt'
       | 'endTurn'
+      | 'claimVictory'
     >();
   });
 
@@ -54,6 +55,8 @@ describe('Action union', () => {
         case 'resolvePrompt':
           return a.choice.kind;
         case 'endTurn':
+          return a.kind;
+        case 'claimVictory':
           return a.kind;
         default: {
           // If a new Action kind is added without a case above, `a` is no

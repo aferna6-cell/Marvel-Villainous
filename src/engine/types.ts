@@ -294,7 +294,8 @@ export type Action =
   | { kind: 'drawToHandSize' }
   | { kind: 'fate' }
   | { kind: 'resolvePrompt'; choice: PromptChoice }
-  | { kind: 'endTurn' };
+  | { kind: 'endTurn' }
+  | { kind: 'claimVictory' };
 
 export type ActionKind = Action['kind'];
 

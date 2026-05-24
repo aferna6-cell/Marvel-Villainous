@@ -1,0 +1,40 @@
+# electron-builder configuration for `pnpm electron:build`.
+#
+# Produces a desktop bundle for the host platform — DMG on macOS,
+# NSIS installer on Windows, AppImage on Linux. This is a personal-use,
+# unsigned local build (no codesign / notarization) suitable for installing
+# on your own machine.
+
+appId: com.local.marvel-villainous
+productName: Marvel Villainous
+artifactName: ${productName}-${version}.${ext}
+
+directories:
+  output: out
+  buildResources: assets
+
+files:
+  - dist/**/*
+  - dist-electron/**/*
+  - package.json
+  - "!**/node_modules"
+  - "!**/*.map"
+
+asar: true
+
+mac:
+  category: public.app-category.board-games
+  target:
+    - dmg
+  hardenedRuntime: false
+  gatekeeperAssess: false
+  identity: null
+
+win:
+  target:
+    - nsis
+
+linux:
+  category: Game
+  target:
+    - AppImage

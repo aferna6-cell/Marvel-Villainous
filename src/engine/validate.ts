@@ -187,6 +187,12 @@ export function isLegal(state: GameState, action: Action): Legality {
       }
       return illegal('cannot end the turn before the actions phase');
 
+    case 'claimVictory':
+      // Always legal for the active player on their own turn — the player
+      // self-attests that the printed objective is met. The engine ratifies
+      // by setting `state.winner`; opponents can dispute via Quit.
+      return true;
+
     default:
       return assertNever(action);
   }

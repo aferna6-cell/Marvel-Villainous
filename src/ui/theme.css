@@ -387,6 +387,96 @@ button {
   gap: 0.6rem;
 }
 
+/* --- Win screen + Pass-device curtain ---------------------------------- */
+
+.win-screen,
+.curtain {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 5, 16, 0.95);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+  z-index: 100;
+  padding: 2rem;
+  text-align: center;
+}
+
+.win-screen__title {
+  font-size: 4rem;
+  color: var(--accent);
+  margin: 0;
+  letter-spacing: 0.25em;
+}
+
+.win-screen__body,
+.curtain__body {
+  font-size: 1.1rem;
+  max-width: 32rem;
+}
+
+.curtain__title {
+  font-size: 2.5rem;
+  margin: 0;
+  color: var(--accent);
+  letter-spacing: 0.15em;
+}
+
+/* --- Action menu (Vanquish / Discard / Claim victory) ----------------- */
+
+.action-menu {
+  background: var(--bg-panel);
+  border: 1px solid var(--accent-dim);
+  border-radius: 6px;
+  padding: 0.6rem 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.action-menu__buttons {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.action-panel {
+  margin-top: 0.6rem;
+  padding: 0.6rem;
+  background: var(--bg-panel-2);
+  border: 1px solid #463457;
+  border-radius: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+}
+
+.action-panel h4 {
+  margin: 0 0 0.25rem 0;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+}
+
+.action-panel__choice {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.15rem 0;
+}
+
+.button--danger {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.button--danger:hover:not(:disabled) {
+  background: var(--danger);
+  color: var(--text);
+}
+
 /* --- Log --------------------------------------------------------------- */
 
 .log {
