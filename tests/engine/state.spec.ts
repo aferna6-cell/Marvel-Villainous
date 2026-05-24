@@ -43,6 +43,7 @@ function makeState(): GameState {
     pendingTriggers: [],
     usedIcons: [],
     instanceCounter: 0,
+    strictIconMode: false,
     fateDeck: [],
     fateDiscard: [],
     globalEvent: null,

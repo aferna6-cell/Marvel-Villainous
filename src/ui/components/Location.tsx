@@ -35,14 +35,22 @@ export function Location({ location, index, readOnly = false }: LocationProps): 
   };
 
   const onDragOver = (e: DragEvent<HTMLDivElement>): void => {
-    if (!readOnly && isCurrent && state.phase === 'actions') e.preventDefault();
+    // Q5: allies can be played to ANY location in your Domain — allow drop
+    // on any of your locations during the actions phase.
+    if (!readOnly && state.phase === 'actions') e.preventDefault();
   };
   const onDrop = (e: DragEvent<HTMLDivElement>): void => {
     if (readOnly) return;
     e.preventDefault();
     const cardId = e.dataTransfer.getData('text/cardid');
-    if (cardId && isCurrent) {
-      tryDispatch(() => engine.dispatch({ kind: 'playCard', cardId }));
+    if (cardId) {
+      tryDispatch(() =>
+        engine.dispatch({
+          kind: 'playCard',
+          cardId,
+          target: { kind: 'location', player: state.activePlayer, location: index },
+        }),
+      );
     }
   };
 

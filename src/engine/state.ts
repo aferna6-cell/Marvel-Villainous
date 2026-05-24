@@ -19,6 +19,7 @@ import { applyDraw, applyEndTurn } from './actions/endTurn';
 import { applyClaimVictory } from './actions/claim';
 import { applySetObjectiveCount, checkWin } from './actions/objective';
 import { applyRelocateAlly } from './actions/relocate';
+import { applySetStrictIconMode, findUnusedIcon, consumeIcon } from './actions/strict';
 import * as startOfTurn from './phases/startOfTurn';
 import * as mainPhase from './phases/mainPhase';
 import * as fatePhase from './phases/fatePhase';
@@ -141,10 +142,34 @@ export function reduce(state: GameState, action: Action): GameState {
     case 'setObjectiveCount':
       next = applySetObjectiveCount(state, action.player, action.key, action.delta);
       break;
+    case 'setStrictIconMode':
+      next = applySetStrictIconMode(state, action.value);
+      break;
     default:
       return assertNever(action);
   }
 
+  // Q2: in strict-icon mode, the gated actions consume a matching icon at
+  // the active player's current location. The validator above already
+  // verified one is available; here we mark it used so the player can't
+  // double-spend it within the same turn.
+  if (state.strictIconMode) {
+    const iconType =
+      action.kind === 'playCard' ? 'play' :
+      action.kind === 'attackHero' ? 'vanquish' :
+      action.kind === 'fate' ? 'fate' :
+      action.kind === 'discardCards' ? 'discard' :
+      action.kind === 'relocateAlly' ? 'move' :
+      null;
+    if (iconType !== null) {
+      const idx = findUnusedIcon(state, iconType);
+      if (idx !== null) {
+        const cloned = cloneState(next);
+        consumeIcon(cloned, idx);
+        next = cloned;
+      }
+    }
+  }
   next = drainTriggers(next);
   next = autoAdvance(next);
   // Auto-detect a per-villain win from the player's objective counts.

@@ -81,6 +81,21 @@ export function TurnControls(): JSX.Element {
         >
           End turn
         </button>
+        <label
+          className="turn-controls__strict"
+          title="Q2: when ON, playing a card / attacking / fating / discarding / relocating each require an unused matching icon at your villain's current location and consume it. Off = relaxed state tracker (you handle the rule yourselves)."
+        >
+          <input
+            type="checkbox"
+            checked={state.strictIconMode}
+            onChange={(e) =>
+              tryDispatch(() =>
+                engine.dispatch({ kind: 'setStrictIconMode', value: e.target.checked }),
+              )
+            }
+          />
+          Strict icons
+        </label>
       </div>
     </section>
   );

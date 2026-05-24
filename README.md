@@ -15,14 +15,23 @@ The app is **playable** end-to-end as a hotseat state-tracker:
   decks into the shared Fate deck per rulebook §3.
 - Per-seat starting Power (0 / 1 / 2 / 2), 4-card starting hand, 4-card
   hand-size limit.
-- Full turn flow: Start → Move (must change location) → Actions → Fate →
-  End. Auto-advance handles transitions. Fate is reveal-1, target chosen
-  after the reveal, with a discard-with-no-effect escape clause.
+- Full turn flow: Start → Move (must change location) → Actions → End.
+  Auto-advance handles transitions. Fate is a regular action in the
+  Actions phase (reveal-1, target chosen after the reveal, then place
+  hero/condition at the location of the active player's choice in the
+  fated opponent's realm), with a discard-with-no-effect escape clause.
 - Action UI: Move villain (click a location), Play card (drag from hand to
-  current location), Vanquish (multi-ally summed strength), Discard cards,
-  Fate an opponent, End turn, Claim victory.
+  any location in your realm), Vanquish (multi-ally summed strength),
+  Discard cards, Fate an opponent (pick target → pick location), End turn,
+  Claim victory.
 - Hotseat **pass-device curtain** between turns hides the previous player's
   hand from the next player.
+- Opt-in **Strict icons** toggle (top of the turn-controls bar): when ON,
+  playing a card / vanquishing / fating / discarding / relocating each
+  require an unused matching icon at the active villain's current location
+  and consume it. OFF (default) treats the engine as a relaxed state
+  tracker — the group handles icon spending themselves, as the rulebook
+  describes.
 
 ### What the engine does NOT yet enforce
 

@@ -10,41 +10,71 @@ placeholders are marked `PLACEHOLDER` in the source.
 
 ## Open questions (raised in CHUNK 3)
 
-### Q1 — Power gained per `gainPower` icon
+### Q1 — Power gained per `gainPower` icon (RESOLVED)
 
-How much Power does a single `gainPower` action icon grant?
-**Current code:** `POWER_PER_GAIN_ICON = 1` (PLACEHOLDER in `actions/gain.ts`).
+User: *"don't understand this — clarification follows"*. The rulebook
+prints the exact Power amount on each `gainPower` coin. Q12 transcription
+of every villain board confirmed this: every board uses
+`gainPower2` (2 Power) or `gainPower3` (3 Power); there is no generic
+"1 Power per icon". The engine encodes the amount in the icon variant.
+The `POWER_PER_GAIN_ICON` constant is no longer load-bearing; the
+`gainPower` handler reads `n` from the icon type itself (`actions/gain.ts`).
 
-### Q2 — Icon → action coupling
+### Q2 — Icon → action coupling (RESOLVED)
 
-What is the exact relationship between action icons and the `playCard`,
-`attackHero`, `fateOpponent`, `discardCards` actions? Specifically: does the
-player have to spend a `play` icon to play a card, a `vanquish` icon to attack,
-a `fate` icon to Fate, etc. — and may an icon be used to perform that action
-more than once?
-**Current code:** `playCard` / `attackHero` / `fateOpponent` / `discardCards`
-are independently legal during the actions phase; using a `play`/`vanquish`/
-`fate`/`discard` icon is recorded but not yet required for the follow-up
-(`actions/useIcon.ts`).
+User: *"You can only take actions during a turn if its present in your
+location."*
 
-### Q3 — Hero coverage granularity
+Implemented as an opt-in `strictIconMode` toggle on `GameState` (off by
+default, so the engine still works as a relaxed state tracker for the
+hotseat group's own enforcement). When ON:
 
-When a hero is at a location, does it cover the entire bottom icon row, or only
-specific bottom icons?
-**Current code:** if any hero is present, the whole bottom row is treated as
-covered (`validate.ts`, per the plan's "bottom row" wording in §3/§4).
+* `playCard` requires an unused `play` icon at the active player's
+  current location and consumes it.
+* `attackHero` requires `vanquish`.
+* `fate` requires `fate`.
+* `discardCards` requires `discard`.
+* `relocateAlly` requires `move`.
 
-### Q4 — Each icon usable once per turn
+Bottom-row icons remain covered while a hero is present at that location
+(Q3); used icons are tracked in `state.usedIcons` so each icon resolves
+at most one of these gated actions per turn (Q4).
 
-Confirm that each action icon at the villain's current location may be used at
-most once per turn.
-**Current code:** an icon already in `usedIcons` is rejected (`validate.ts`).
+Files: `engine/actions/strict.ts`, `engine/validate.ts`, `engine/state.ts`.
+UI toggle: `ui/components/TurnControls.tsx` ("Strict icons" checkbox).
+Tests: `tests/engine/strict-mode.spec.ts`.
 
-### Q5 — Where allies/items/conditions are played
+### Q3 — Hero coverage granularity (CLARIFIED)
 
-When a player plays an ally, item, or condition, is it placed at the villain's
-current location, or may the player choose any location?
-**Current code:** placed at the villain's current location (`actions/playCard.ts`).
+User: *"don't understand this — clarification follows"*. Per the
+rulebook's "Hero" section, a hero covers the entire row of action icons
+*below* it (the Fate-side row, which is the player-side bottom row on
+the wiki convention). This is what the engine already does: if any hero
+is present at a location, the entire bottom row of icons is treated as
+covered for both `useIcon` and the strict-mode lookup (`validate.ts`,
+`engine/actions/strict.ts`). No code change needed.
+
+### Q4 — Each icon usable once per turn (CLARIFIED)
+
+User: *"don't understand this — clarification follows"*. Q2 resolution
+above implies it: an icon, once spent on its gated follow-up action, is
+not available again that turn. The engine already tracks `usedIcons`
+per turn and clears it on `endTurn`. No code change needed.
+
+### Q5 — Where allies/items/conditions are played (RESOLVED)
+
+User: *"Allies can be played to any location in the heros domain as
+well as events."*
+
+`applyPlayCard` now accepts an optional `target: { kind: 'location',
+player, location }` and places the card at that location when the
+player chooses one in their own realm. Without a target it still falls
+back to the villain's current location.
+
+Drag-and-drop in `ui/components/Location.tsx` now allows dropping a
+card on any of the 4 locations in the active player's realm.
+
+Files: `engine/actions/playCard.ts`, `ui/components/Location.tsx`.
 
 ### Q6 — Vanquish strength comparison (RESOLVED)
 
@@ -56,49 +86,68 @@ location." The `attackHero` action now takes `allyIds: CardId[]`, the
 reducer sums effective strengths, and on success discards the spent allies
 (`engine/actions/attack.ts`).
 
-### Q7 — Turn-scoped strength boosts
+### Q7 — Turn-scoped strength boosts (RESOLVED)
 
-When does a `duration: 'turn'` strength boost expire (end of the current turn,
-start of the next, etc.)?
-**Current code:** turn-scoped boosts are applied identically to permanent ones;
-expiry is not yet implemented (`cards/effects.ts` — `boostStrength`).
+User: *"Strenght boosts are permanent unless stateed otherwise."*
 
-### Q8 — Per-villain numeric exceptions
+Every strength boost in the printed cards is permanent unless the card
+text explicitly limits it. Since the repo intentionally does not encode
+card text (§0), boost duration on a card metadata level is always
+permanent in practice. The `duration: 'turn'` branch of `boostStrength`
+remains so a future card with an explicit turn-scoped clause can opt in
+when it lands; it is not exercised by any current card data.
 
-What are each villain's starting hand size, starting Power, and starting deck
-composition? The plan (§5, §11) states these are villain-specific and not
-uniform.
-**Current code:** only the generic default hand size (4) exists; per-villain
-values are unencoded and will be filled in M4+. `PlayerState.handSize` is
-the override slot — per-villain values plug in there.
+### Q8 — Per-villain numeric exceptions (RESOLVED)
+
+User: *"4 is hand size."*
+
+Hand size is a uniform 4 for every villain (matches the rulebook "draw
+back up to four cards" wording). `DEFAULT_HAND_SIZE = 4` in
+`engine/util.ts` is the canonical value; `PlayerState.handSize` is no
+longer needed as a per-villain override slot (kept as the override
+mechanism in case a future card or villain-specific effect mutates it
+mid-game). Starting Power is per-seat (1st 0, 2nd 1, 3rd 2, 4th 2)
+already (see Q13). Deck composition is per-villain card data (see
+Q14 and the per-villain `deck.ts` files).
 
 ## Open questions (raised in CHUNK 4)
 
-### Q9 — Fate card placement location
+### Q9 — Fate card placement location (RESOLVED)
 
-When a Fate hero or condition is played onto the fated player's realm, which
-of the 4 locations does it land on? Is the location fixed on the card, chosen
-by the active player, chosen by the fated player, or determined by some other
-rule?
-**Current code:** placed at location 0 by default (`cards/effects.ts` —
-`resolveFatePlay`).
+User: *"Player who drew the fate card chooses its location."*
 
-### Q10 — Can the player return to the Actions phase after Fate?
+The Fate resolution now uses a two-step prompt: first the active player
+picks the target opponent (`fatePlay` continuation), then they pick the
+destination location in that opponent's realm (`fatePlaceLocation`
+continuation). The `PromptContinuation` union gained the
+`fatePlaceLocation` variant, `resolveFatePlay` parks the
+second-step prompt for hero/condition cards, and `resolveFatePlaceLocation`
+performs the actual placement.
 
-The plan §3 lists phases in order `start → move → actions → fate → end`, which
-suggests entering Fate exits Actions. Confirm whether using a Fate icon /
-Fating an opponent forfeits any remaining Actions for the turn.
-**Current code:** Fate transitions to the `'fate'` phase; once the Fate prompt
-resolves, the phase machine advances to `'end'` (no return to actions).
+UI: `ui/components/FatePanel.tsx` renders both steps in sequence.
+Files: `engine/types.ts`, `engine/cards/effects.ts`,
+`ui/components/FatePanel.tsx`. Tests: `tests/engine/fate.spec.ts`.
 
-### Q11 — Coupling of `fateOpponent` to a Fate icon (PARTIAL)
+### Q10 — Can the player return to the Actions phase after Fate? (RESOLVED)
 
-Rulebook confirms Fate is invoked via a Fate icon — there is NO alternate
-"pay Power to Fate without an icon" path. What remains unresolved is whether
-the engine should require the icon to actually be spent before
-`fateOpponent` is legal (related to Q2).
-**Current code:** `fateOpponent` is independently legal during the Actions
-phase; no icon prerequisite enforced (icons are tracked separately).
+User: *"Players can take actions in any order."*
+
+Fate is just another action in the Actions phase, not a phase change.
+`applyFate` no longer transitions `s.phase = 'fate'`; the `fate` action
+parks its target-and-location prompt and the phase stays `'actions'` for
+the rest of the turn. The `'fate'` phase value remains in the union for
+backwards compatibility but is never entered by the action handlers.
+
+Files: `engine/actions/fate.ts`. Tests: `tests/engine/phases.spec.ts`,
+`tests/engine/fate.spec.ts`.
+
+### Q11 — Coupling of `fate` to a Fate icon (RESOLVED)
+
+User: *"don't understand this — clarification follows"*. Subsumed by
+Q2: in `strictIconMode`, the `fate` action requires (and consumes) an
+unused `fate` icon at the active player's current location, exactly
+matching the rulebook. In the default relaxed mode the engine does not
+enforce the prerequisite — the hotseat group handles it themselves.
 
 ## Open questions (raised in CHUNK 5 — Thanos)
 
@@ -160,13 +209,18 @@ All 15 cards transcribed via the same Playwright scrape. See
 villain's Fate deck into the shared `state.fateDeck`. The Event subsystem
 (Q17) routes drawn Events to `state.globalEvent`.
 
-### Q19 — Dynamic-cost cards
+### Q19 — Dynamic-cost cards (RESOLVED)
 
-The Mad Titan's printed cost is "?" (the actual Power cost equals the
-Strength of the defeated target character). The engine's `cost: number`
-field can't express this directly; the card is encoded with `cost: 0` plus
-a `villainSpecific` effect (`thanos.madTitan`) that will collect the
-deferred cost when the handler lands in CHUNK 7+.
+User: *"As long as the cost is correct."*
+
+Confirmation that the engine doesn't need to invent a separate
+"dynamic cost" cost type — it only needs to charge the correct number
+of Power at play time. For The Mad Titan, the correct cost is the
+defeated target character's Strength, which a `villainSpecific` effect
+(`thanos.madTitan`) will compute and deduct from `power` when the
+handler lands in CHUNK 7+. The base `cost: 0` on the card definition
+exists so the legality check doesn't reject the play before the
+dynamic charge runs.
 
 ### Q16 — Fate decision order (RESOLVED — CHUNK 6 follow-up)
 

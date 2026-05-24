@@ -65,6 +65,7 @@ function makeState(): GameState {
     pendingTriggers: [],
     usedIcons: [],
     instanceCounter: 0,
+    strictIconMode: false,
     // Single shared Fate deck (rulebook Setup §3).
     fateDeck: ['fate-deck-secret-1', 'fate-deck-secret-2'],
     fateDiscard: ['fate-discard-public'],

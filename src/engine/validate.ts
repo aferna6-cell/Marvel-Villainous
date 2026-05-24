@@ -6,6 +6,7 @@
 // in RULES_TRACE.md.
 
 import { getCard } from './cards/registry';
+import { findUnusedIcon } from './actions/strict';
 import { DEFAULT_HAND_SIZE, assertNever } from './util';
 import type {
   Action,
@@ -109,6 +110,11 @@ export function isLegal(state: GameState, action: Action): Legality {
       if (player.power < def.cost) {
         return illegal(`not enough power (need ${def.cost}, have ${player.power})`);
       }
+      // Q2: in strict mode, a Play-a-Card action requires an unused, uncovered
+      // `play` icon at the active player's current location.
+      if (state.strictIconMode && findUnusedIcon(state, 'play') === null) {
+        return illegal('no unused "play" icon at your current location');
+      }
       return true;
     }
 
@@ -129,6 +135,11 @@ export function isLegal(state: GameState, action: Action): Legality {
           return illegal('every attacking ally must be at the same location as the hero');
         }
       }
+      // Q2: strict-mode vanquish requires a `vanquish` icon at the
+      // active player's current location.
+      if (state.strictIconMode && findUnusedIcon(state, 'vanquish') === null) {
+        return illegal('no unused "vanquish" icon at your current location');
+      }
       return true;
     }
 
@@ -141,6 +152,9 @@ export function isLegal(state: GameState, action: Action): Legality {
         const idx = hand.indexOf(id);
         if (idx === -1) return illegal(`card "${id}" is not in hand`);
         hand.splice(idx, 1); // consume so duplicates are checked correctly
+      }
+      if (state.strictIconMode && findUnusedIcon(state, 'discard') === null) {
+        return illegal('no unused "discard" icon at your current location');
       }
       return true;
     }
@@ -167,6 +181,9 @@ export function isLegal(state: GameState, action: Action): Legality {
       const opponents = state.playerOrder.filter((id) => id !== state.activePlayer);
       if (opponents.length === 0) {
         return illegal('no opponents to Fate');
+      }
+      if (state.strictIconMode && findUnusedIcon(state, 'fate') === null) {
+        return illegal('no unused "fate" icon at your current location');
       }
       return true;
     }
@@ -211,8 +228,14 @@ export function isLegal(state: GameState, action: Action): Legality {
       if (!dest) return illegal('no such destination location');
       const ally = from.alliesPresent.find((a) => a.instanceId === action.instanceId);
       if (!ally) return illegal('that ally is not at the source location');
+      if (state.strictIconMode && findUnusedIcon(state, 'move') === null) {
+        return illegal('no unused "move" icon at your current location');
+      }
       return true;
     }
+
+    case 'setStrictIconMode':
+      return true;
 
     default:
       return assertNever(action);

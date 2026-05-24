@@ -318,6 +318,23 @@ button {
 .turn-controls__buttons {
   display: flex;
   gap: 0.4rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.turn-controls__strict {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-left: auto;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  cursor: pointer;
+  user-select: none;
+}
+
+.turn-controls__strict input {
+  cursor: pointer;
 }
 
 /* --- Hand -------------------------------------------------------------- */

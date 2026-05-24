@@ -164,6 +164,7 @@ export function newGame(opts: NewGameOpts): GameState {
     pendingTriggers: [],
     usedIcons: [],
     instanceCounter: 0,
+    strictIconMode: false,
     fateDeck: fateShuffle.items,
     fateDiscard: [],
     globalEvent: null,

@@ -30,7 +30,8 @@ export function applyFate(state: GameState): GameState {
     s.fateDiscard = [];
   }
 
-  s.phase = 'fate';
+  // Q10: Fate is just another player action — it does NOT exit the actions
+  // phase. The player may keep using icons / playing cards afterwards.
   const revealed = s.fateDeck.slice(0, FATE_REVEAL_COUNT);
   const eligibleTargets = s.playerOrder.filter((id) => id !== s.activePlayer);
   s.log.push({

@@ -59,7 +59,7 @@ below cite the booklet's printed pagination as parsed from the PDF.
 | Move + Actions are player-driven (no auto-advance)      | `engine/phases/mainPhase.ts` — `canAdvance` false | On Your Turn                     |
 | Movement override: card effects may flip the flag       | `engine/types.ts` — `PlayerState.mustMoveDifferent`| (card-driven exceptions)        |
 | Fate reveals exactly **1** card (rulebook divergence from the plan) | `engine/actions/fate.ts` — `FATE_REVEAL_COUNT = 1` | Fate Action: "Reveal one card from the top of the Fate deck" |
-| Fate phase exits to End phase once the prompt resolves  | `engine/phases/fatePhase.ts` — `runAutomatic`     | On Your Turn                     |
+| Fate stays in the Actions phase (Q10 — players can take actions in any order; Fate is just another action) | `engine/actions/fate.ts` — `applyFate` (no phase change) | On Your Turn / Types of Actions |
 | End of turn draws back up to the player's hand size     | `engine/phases/endOfTurn.ts` — `runAutomatic`     | On Your Turn (end)               |
 | Per-player hand size override                           | `engine/types.ts` — `PlayerState.handSize`        | (villain-specific exceptions)    |
 | Turn passes in `playerOrder`; turn++ on wrap            | `engine/phases/endOfTurn.ts` — `runAutomatic`     | On Your Turn                     |
@@ -135,13 +135,21 @@ below cite the booklet's printed pagination as parsed from the PDF.
 | Empty Fate deck reshuffles the Fate discard      | `engine/actions/fate.ts` — `applyFate`   | (deck-exhaust convention; parallel rule) |
 | A pending prompt halts the auto-advance loop     | `engine/state.ts` — `autoAdvance`         |                                  |
 
+## Q-resolved rule clarifications (most recent batch)
+
+| Rule                                            | Code location                          | RULES_QUESTIONS link              |
+| ------------------------------------------------ | ---------------------------------------- | ---------------------------------- |
+| Hand size is a uniform 4 for every villain       | `engine/util.ts` — `DEFAULT_HAND_SIZE = 4` | Q8                                  |
+| Strength boosts are permanent unless the card text limits them | `engine/cards/effects.ts` — `boostStrength` permanent default | Q7 |
+| Allies / Items / Conditions / Events may be played to any location in the active player's realm | `engine/actions/playCard.ts` (target.location), `ui/components/Location.tsx` drop on any location | Q5 |
+| Player who Fated picks the placement location for a Fate hero/condition | `engine/cards/effects.ts` — `fatePlaceLocation` continuation; `ui/components/FatePanel.tsx` step 2 | Q9 |
+| Fate is an action in the Actions phase, not a phase change | `engine/actions/fate.ts` — `applyFate` (no phase mutation) | Q10 |
+| Opt-in strict icon enforcement: gated actions require + consume a matching icon at the active player's current location | `engine/actions/strict.ts`, `engine/validate.ts`, `engine/state.ts`; UI toggle in `ui/components/TurnControls.tsx` | Q2 / Q11 / Q3 / Q4 |
+| Mad Titan-style dynamic cost: card has `cost: 0` and a `villainSpecific` effect deducts the actual Power at play time | `engine/cards/cards/thanos/madTitan.ts` (stub) — handler arrives with CHUNK 7+ | Q19 |
+
 ## Not yet enforced (pending later milestones)
 
 | Rule                                            | Reason / target milestone               |
 | ------------------------------------------------ | ----------------------------------------- |
-| Per-villain hand-size exceptions                 | needs rulebook — see RULES_QUESTIONS Q13   |
-| Exact icon → action coupling                     | needs rulebook — see RULES_QUESTIONS Q2    |
-| Power gained per `gainPower` icon                | PLACEHOLDER = 1 — see RULES_QUESTIONS Q1   |
-| Turn-scoped strength-boost expiry                | needs rulebook — see RULES_QUESTIONS Q7    |
-| Thanos's printed realm icons (full mapping)      | needs rulebook — see RULES_QUESTIONS Q12   |
-| Thanos's full 30-card deck composition           | needs rulebook — see RULES_QUESTIONS Q14   |
+| Per-card behavior wiring for ability text not expressible as a §2.3 primitive | CHUNK 7+ (`villainSpecific` handlers) |
+| Targeted Events: must play on the indicated villain | needs `targetedVillain` metadata on Event cards — pending real Event data |

@@ -1,19 +1,20 @@
-// `playCard` action (marvel-villainous-plan.md §3).
+// `playCard` action (marvel-villainous-plan.md §3; rulebook "Play a Card").
 // Assumes legality already checked by validate.ts.
 //
-// NOTE: allies/items/conditions are placed at the villain's current location.
-// Whether the player may instead choose a destination location is a rulebook
-// detail — see RULES_QUESTIONS.md.
+// Q5: "You may play an Ally to any location in your Domain or directly to an
+//      Event. Items are directly played to your Domain only." (rulebook)
+// The caller passes `target.location` for ally/item/condition placement.
+// If omitted, defaults to the villain's current location.
 
 import { cloneState } from '../util';
 import { getCard } from '../cards/registry';
 import { applyEffects } from '../cards/effects';
-import type { CardId, GameState, InPlayCard, TargetSpec } from '../types';
+import type { CardId, GameState, InPlayCard, LocationIndex, TargetSpec } from '../types';
 
 export function applyPlayCard(
   state: GameState,
   cardId: CardId,
-  _target?: TargetSpec,
+  target?: TargetSpec,
 ): GameState {
   let s = cloneState(state);
   const player = s.players[s.activePlayer];
@@ -26,11 +27,17 @@ export function applyPlayCard(
   if (handIdx !== -1) player.hand.splice(handIdx, 1);
   player.power -= def.cost;
 
-  const locIdx = player.realm.villainTokenAt;
+  // Pick the destination location: the caller's `target.location` if it
+  // names one, otherwise the villain's current location (sensible default).
+  let placeAt: LocationIndex = player.realm.villainTokenAt;
+  if (target?.kind === 'location' && target.player === s.activePlayer) {
+    placeAt = target.location;
+  }
+
   s.log.push({
     turn: s.turn,
     player: s.activePlayer,
-    message: `played ${cardId} for ${def.cost} power`,
+    message: `played ${cardId} for ${def.cost} power → loc ${placeAt + 1}`,
   });
 
   if (def.type === 'ally' || def.type === 'item' || def.type === 'condition') {
@@ -41,7 +48,7 @@ export function applyPlayCard(
       tokens: {},
     };
     s.instanceCounter += 1;
-    const loc = player.realm.locations[locIdx];
+    const loc = player.realm.locations[placeAt];
     if (loc) {
       if (def.type === 'ally') loc.alliesPresent.push(inPlay);
       else if (def.type === 'item') loc.itemsPresent.push(inPlay);
@@ -58,7 +65,7 @@ export function applyPlayCard(
   s = applyEffects(s, def.effects, {
     player: s.activePlayer,
     sourceCardId: cardId,
-    location: locIdx,
+    location: placeAt,
   });
 
   // One-shot cards go to the discard pile after their effects resolve.

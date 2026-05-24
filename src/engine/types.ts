@@ -156,13 +156,21 @@ export interface Prompt {
 }
 
 /** Discriminated continuation for resolving a prompt. */
-export type PromptContinuation = {
-  kind: 'fatePlay';
-  /** The eligible opponents the active player may target (any non-self seated player). */
-  eligibleTargets: PlayerId[];
-  /** The card(s) revealed from the shared Fate deck (rulebook: reveal-1, so length 1). */
-  revealed: CardId[];
-};
+export type PromptContinuation =
+  | {
+      kind: 'fatePlay';
+      /** The eligible opponents the active player may target (any non-self seated player). */
+      eligibleTargets: PlayerId[];
+      /** The card(s) revealed from the shared Fate deck (rulebook: reveal-1, so length 1). */
+      revealed: CardId[];
+    }
+  | {
+      kind: 'fatePlaceLocation';
+      /** Targeted opponent picked in the previous prompt step. */
+      opponent: PlayerId;
+      /** The revealed card being placed. */
+      cardId: CardId;
+    };
 
 // --- Players & game state --------------------------------------------------
 
@@ -244,6 +252,16 @@ export interface GameState {
   usedIcons: UsedIcon[];
   /** Monotonic counter for minting deterministic InstanceIds. */
   instanceCounter: number;
+  /**
+   * When `true`, icon-gated actions (playCard, attackHero/Vanquish, fate,
+   * discardCards, relocateAlly) require an unused matching icon at the
+   * active player's current location and consume it. When `false`
+   * (default), the engine acts as a relaxed state tracker — useful while
+   * per-card ability auto-wiring is still being built out. Toggleable
+   * from the UI so a hotseat group can opt into the rulebook-strict
+   * enforcement (Q2) when they're ready.
+   */
+  strictIconMode: boolean;
 }
 
 // --- Triggered-ability event bus -------------------------------------------
@@ -308,7 +326,9 @@ export type Action =
    * (Infinity Stones, Soul Marks, Upgrade level, defeated bosses, contracts).
    * The engine then auto-detects the per-villain win condition.
    */
-  | { kind: 'setObjectiveCount'; player: PlayerId; key: string; delta: number };
+  | { kind: 'setObjectiveCount'; player: PlayerId; key: string; delta: number }
+  /** Toggle the rulebook-strict icon enforcement (Q2). */
+  | { kind: 'setStrictIconMode'; value: boolean };
 
 export type ActionKind = Action['kind'];
 

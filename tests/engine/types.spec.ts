@@ -17,6 +17,7 @@ describe('Action union', () => {
       | 'claimVictory'
       | 'relocateAlly'
       | 'setObjectiveCount'
+      | 'setStrictIconMode'
     >();
   });
 
@@ -64,6 +65,8 @@ describe('Action union', () => {
           return `${a.fromLocation}->${a.toLocation}:${a.instanceId}`;
         case 'setObjectiveCount':
           return `${a.player}:${a.key}:${a.delta}`;
+        case 'setStrictIconMode':
+          return `strict:${a.value}`;
         default: {
           // If a new Action kind is added without a case above, `a` is no
           // longer `never` here and this assignment fails to compile.

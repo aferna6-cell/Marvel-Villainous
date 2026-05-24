@@ -82,6 +82,7 @@ export function makeGame(overrides: Partial<GameState> = {}): GameState {
     pendingTriggers: [],
     usedIcons: [],
     instanceCounter: 0,
+    strictIconMode: false,
     fateDeck: [],
     fateDiscard: [],
     globalEvent: null,

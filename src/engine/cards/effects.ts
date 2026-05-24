@@ -293,6 +293,9 @@ export function applyResolvePrompt(state: GameState, choice: PromptChoice): Game
   if (prompt.continuation?.kind === 'fatePlay') {
     return resolveFatePlay(state, prompt.continuation, choice);
   }
+  if (prompt.continuation?.kind === 'fatePlaceLocation') {
+    return resolveFatePlaceLocation(state, prompt.continuation, choice);
+  }
 
   const s = cloneState(state);
   s.log.push({
@@ -386,19 +389,20 @@ function resolveFatePlay(
   }
 
   if (def.type === 'hero' || def.type === 'condition') {
-    // Placement defaults to location 0 — see RULES_QUESTIONS Q9.
-    const loc = opponent.realm.locations[0];
-    if (loc) {
-      const inPlay = {
-        instanceId: `inst-${s.instanceCounter}`,
-        cardId: playedId,
-        strengthModifier: 0,
-        tokens: {},
-      };
-      s.instanceCounter += 1;
-      if (def.type === 'hero') loc.heroesPresent.push(inPlay);
-      else loc.conditions.push(inPlay);
-    }
+    // Q9: the fating player chooses the destination location. Park a
+    // follow-up prompt with one choice per location on the opponent's realm.
+    const locationChoices: PromptChoice[] = ([0, 1, 2, 3] as const).map((i) => ({
+      kind: 'location' as const,
+      location: i,
+    }));
+    s.pendingPrompt = {
+      id: `fate-place-${s.turn}-${s.log.length}`,
+      player: state.activePlayer,
+      kind: 'chooseLocation',
+      message: `place ${playedId} on ${targetId}'s realm — which location?`,
+      choices: locationChoices,
+      continuation: { kind: 'fatePlaceLocation', opponent: targetId, cardId: playedId },
+    };
     return s;
   }
 
@@ -438,5 +442,43 @@ function resolveFatePlay(
 
   // Any other type (unexpected on a fate card): send to the shared discard.
   s.fateDiscard.push(playedId);
+  return s;
+}
+
+/**
+ * Q9 step-2: the fating player picked a location on the opponent's realm
+ * for the just-revealed hero or condition card. Place it there.
+ */
+function resolveFatePlaceLocation(
+  state: GameState,
+  continuation: Extract<PromptContinuation, { kind: 'fatePlaceLocation' }>,
+  choice: PromptChoice,
+): GameState {
+  if (choice.kind !== 'location') {
+    throw new Error('resolveFatePlaceLocation: expected a location choice');
+  }
+  const s = cloneState(state);
+  s.pendingPrompt = null;
+  const opp = s.players[continuation.opponent];
+  const loc = opp?.realm.locations[choice.location];
+  if (!opp || !loc) {
+    s.fateDiscard.push(continuation.cardId);
+    return s;
+  }
+  const def = getCard(continuation.cardId);
+  const inPlay = {
+    instanceId: `inst-${s.instanceCounter}`,
+    cardId: continuation.cardId,
+    strengthModifier: 0,
+    tokens: {},
+  };
+  s.instanceCounter += 1;
+  if (def?.type === 'hero') loc.heroesPresent.push(inPlay);
+  else loc.conditions.push(inPlay); // condition or fallback
+  s.log.push({
+    turn: s.turn,
+    player: state.activePlayer,
+    message: `placed ${continuation.cardId} on ${continuation.opponent} loc ${choice.location + 1}`,
+  });
   return s;
 }

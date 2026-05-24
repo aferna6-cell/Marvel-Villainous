@@ -36,7 +36,8 @@ describe('Fate action — reveal-1 from the shared deck (rulebook §4)', () => {
     ]);
     const game = setupThanosVsThanos(['fate-hero-a', 'fate-hero-b']);
     const next = reduce(game, { kind: 'fate' });
-    expect(next.phase).toBe('fate');
+    // Q10: Fate stays in the actions phase.
+    expect(next.phase).toBe('actions');
     expect(next.pendingPrompt?.continuation?.kind).toBe('fatePlay');
     if (next.pendingPrompt?.continuation?.kind === 'fatePlay') {
       // Reveal-1, not reveal-2.
@@ -70,12 +71,19 @@ describe('Fate — hero lands on the chosen opponent and covers bottom-row icons
     ]);
     const game = setupThanosVsThanos(['fate-hero-a']);
     const fated = reduce(game, { kind: 'fate' });
-    const resolved = reduce(fated, {
+    // Step 1: pick the target opponent.
+    const targetPicked = reduce(fated, {
       kind: 'resolvePrompt',
       choice: { kind: 'target', target: { kind: 'player', player: 'p2' } },
     });
-    expect(resolved.pendingPrompt).toBeNull();
-    const heroes = resolved.players.p2.realm.locations[0]?.heroesPresent ?? [];
+    // Step 2 (Q9): pick the location.
+    expect(targetPicked.pendingPrompt?.continuation?.kind).toBe('fatePlaceLocation');
+    const placed = reduce(targetPicked, {
+      kind: 'resolvePrompt',
+      choice: { kind: 'location', location: 2 },
+    });
+    expect(placed.pendingPrompt).toBeNull();
+    const heroes = placed.players.p2.realm.locations[2]?.heroesPresent ?? [];
     expect(heroes.map((h) => h.cardId)).toEqual(['fate-hero-a']);
   });
 
@@ -132,17 +140,21 @@ describe('Fate — hero lands on the chosen opponent and covers bottom-row icons
 });
 
 describe('Fate — Condition cards', () => {
-  it("a played Condition sits on the targeted opponent's realm", () => {
+  it("a played Condition sits on the targeted opponent's realm at the chosen location", () => {
     registerCards([
       makeCard({ id: 'fate-cond-1', villain: 'fate-thanos', type: 'condition' }),
     ]);
     const game = setupThanosVsThanos(['fate-cond-1']);
     const fated = reduce(game, { kind: 'fate' });
-    const resolved = reduce(fated, {
+    const targetPicked = reduce(fated, {
       kind: 'resolvePrompt',
       choice: { kind: 'target', target: { kind: 'player', player: 'p2' } },
     });
-    const conditions = resolved.players.p2.realm.locations[0]?.conditions ?? [];
+    const placed = reduce(targetPicked, {
+      kind: 'resolvePrompt',
+      choice: { kind: 'location', location: 1 },
+    });
+    const conditions = placed.players.p2.realm.locations[1]?.conditions ?? [];
     expect(conditions.map((c) => c.cardId)).toEqual(['fate-cond-1']);
   });
 

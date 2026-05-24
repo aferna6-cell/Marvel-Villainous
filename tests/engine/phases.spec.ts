@@ -61,7 +61,8 @@ describe('Fate phase', () => {
     // Single shared Fate deck (rulebook Setup §3).
     const game = makeGame({ phase: 'actions', fateDeck: ['fc1'] });
     const next = reduce(game, { kind: 'fate' });
-    expect(next.phase).toBe('fate');
+    // Q10: Fate stays in the actions phase — it's just another action.
+    expect(next.phase).toBe('actions');
     expect(next.pendingPrompt?.continuation?.kind).toBe('fatePlay');
     // Rulebook reveal-then-target: 1 choice per eligible opponent + skip.
     expect(next.pendingPrompt?.choices).toHaveLength(2);
@@ -74,15 +75,20 @@ describe('Fate phase', () => {
     const game = makeGame({ phase: 'actions', fateDeck: ['fc1'] });
     game.players.p1.deck = ['p1-d1', 'p1-d2', 'p1-d3'];
     const fated = reduce(game, { kind: 'fate' });
-    const resolved = reduce(fated, {
+    const targetPicked = reduce(fated, {
       kind: 'resolvePrompt',
       choice: { kind: 'target', target: { kind: 'player', player: 'p2' } },
+    });
+    const resolved = reduce(targetPicked, {
+      kind: 'resolvePrompt',
+      choice: { kind: 'location', location: 0 },
     });
     expect(resolved.pendingPrompt).toBeNull();
     expect(resolved.players.p2.realm.locations[0]?.heroesPresent).toHaveLength(1);
     expect(resolved.players.p2.realm.locations[0]?.heroesPresent[0]?.cardId).toBe('fc1');
-    expect(resolved.activePlayer).toBe('p2');
-    expect(resolved.phase).toBe('move');
+    // Q10: Fate stays in actions phase — does NOT auto-rotate to next player.
+    expect(resolved.activePlayer).toBe('p1');
+    expect(resolved.phase).toBe('actions');
   });
 });
 
