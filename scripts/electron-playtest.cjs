@@ -146,6 +146,68 @@ fs.mkdirSync(OUT, { recursive: true });
     await clickByText('Ready');
     await snap('after-curtain');
 
+    // p2's turn — drive a Fate.
+    await clickLocation(2);
+    await snap('p2-after-move');
+    await clickByText('Fate');
+    await snap('p2-fate-prompt');
+    // Resolve fate by picking the first non-skip choice (target opponent).
+    await win.webContents.executeJavaScript(`(() => {
+      const panel = document.querySelector('.fate-panel, .prompt-panel');
+      if (!panel) return;
+      const btns = Array.from(panel.querySelectorAll('button'));
+      const target = btns.find((b) => !(/Skip|Discard|skip/i.test(b.textContent || '')));
+      if (target) target.click();
+    })()`);
+    await new Promise((r) => setTimeout(r, 300));
+    await snap('p2-fate-resolved');
+    // If a place-location prompt is parked, pick Location 1.
+    await win.webContents.executeJavaScript(`(() => {
+      const panel = document.querySelector('.fate-panel, .prompt-panel');
+      if (!panel) return;
+      const loc = Array.from(panel.querySelectorAll('button')).find((b) => /Location 1/.test(b.textContent || ''));
+      if (loc) loc.click();
+    })()`);
+    await new Promise((r) => setTimeout(r, 300));
+    await snap('p2-fate-placed');
+
+    // Try ACTIVATE — find an activate icon.
+    await clickIcon('activate');
+    await snap('p2-activate-prompt');
+    // Skip the activate prompt if parked.
+    await win.webContents.executeJavaScript(`(() => {
+      const panel = document.querySelector('.prompt-panel');
+      if (!panel) return;
+      const skip = Array.from(panel.querySelectorAll('button')).find((b) => /Skip/i.test(b.textContent || ''));
+      if (skip) skip.click();
+    })()`);
+    await new Promise((r) => setTimeout(r, 300));
+    await snap('p2-after-activate');
+
+    // Play a card from hand via direct dispatch (drag-and-drop simulation
+    // is brittle in headless mode, so we click the first card's name and
+    // dispatch via the engine handle — actually, just call the engine).
+    await win.webContents.executeJavaScript(`(() => {
+      const cards = Array.from(document.querySelectorAll('.hand .card'));
+      const first = cards[0];
+      if (!first) return;
+      // Find a location to drop onto.
+      const loc = document.querySelector('.realm:not(.realm--readonly) .location.location--current');
+      if (!loc) return;
+      // Synthesize a drop event with the card's data.
+      const cardId = (first.getAttribute('title') || '').split(' — ')[0] || first.querySelector('.card__name')?.textContent;
+      // Drag-and-drop is hard to fake — instead, leave a marker for the test.
+      first.style.outline = '2px solid hotpink';
+    })()`);
+    await snap('p2-card-highlighted');
+
+    // End p2's turn.
+    await clickByText('End turn');
+    await snap('p2-end-turn');
+    // Dismiss pass-device for p1.
+    await clickByText('Ready');
+    await snap('p1-turn-2');
+
     // Quit back to menu.
     await clickByText('Quit');
     await snap('back-to-menu');
