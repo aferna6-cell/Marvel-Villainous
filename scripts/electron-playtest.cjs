@@ -124,13 +124,19 @@ fs.mkdirSync(OUT, { recursive: true });
     await clickIcon('gainPower');
     await snap('after-gainPower');
 
-    // Open the advisor.
-    await clickByText('Suggest a move');
+    // Open the advisor (directive plan view).
+    await clickByText('Suggest my next move');
     await snap('advisor-open');
+    // Close the advisor so the click-to-play step isn't blocked.
+    await clickByText('Ignore');
 
-    // Expand the whole-turn plans expander.
-    await clickByText('Whole-turn plans');
-    await snap('advisor-sequences');
+    // Click a card in the hand to play it at the current location.
+    await win.webContents.executeJavaScript(`(() => {
+      const slot = document.querySelector('.hand__card-slot');
+      if (slot) slot.click();
+    })()`);
+    await new Promise((r) => setTimeout(r, 300));
+    await snap('after-click-play');
 
     // Toggle strict icons on.
     await clickByText('Strict icons');

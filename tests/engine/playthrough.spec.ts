@@ -140,15 +140,18 @@ describe('Playthrough — engine survives every action kind in a single game', (
     registerAll();
     let g = newGame({ villains: ['thanos', 'hela'], seed: 13 });
 
-    // Move
-    g = dispatch(g, { kind: 'moveVillain', to: 2 });
+    // Move to Knowhere (loc 3) — its top row has [fate, play, vanquish],
+    // so Fate is legal there even with the always-fate-gated rule.
+    g = dispatch(g, { kind: 'moveVillain', to: 3 });
     expect(g.phase).toBe('actions');
 
     // Use Icon — find a usable icon at the current location.
     const me = g.players[g.activePlayer]!;
     const loc = me.realm.locations[me.realm.villainTokenAt]!;
     const allIcons = [...loc.topIcons, ...loc.bottomIcons];
-    const idx = allIcons.findIndex((_, i) => {
+    const idx = allIcons.findIndex((icon, i) => {
+      // Don't burn the fate icon — the test wants to Fate next.
+      if (icon === 'fate') return false;
       const a: Action = { kind: 'useIcon', location: me.realm.villainTokenAt, iconIndex: i };
       return isLegal(g, a) === true;
     });

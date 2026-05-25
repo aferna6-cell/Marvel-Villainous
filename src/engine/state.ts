@@ -309,25 +309,24 @@ export function reduce(state: GameState, action: Action): GameState {
     next.history = state.history;
   }
 
-  // Q2: in strict-icon mode, the gated actions consume a matching icon at
-  // the active player's current location. The validator above already
-  // verified one is available; here we mark it used so the player can't
-  // double-spend it within the same turn.
-  if (state.strictIconMode) {
-    const iconType =
-      action.kind === 'playCard' ? 'play' :
-      action.kind === 'attackHero' ? 'vanquish' :
-      action.kind === 'fate' ? 'fate' :
-      action.kind === 'discardCards' ? 'discard' :
-      action.kind === 'relocateAlly' ? 'move' :
-      null;
-    if (iconType !== null) {
-      const idx = findUnusedIcon(state, iconType);
-      if (idx !== null) {
-        const cloned = cloneState(next);
-        consumeIcon(cloned, idx);
-        next = cloned;
-      }
+  // Icon consumption. Fate is ALWAYS gated by a `fate` icon (rulebook
+  // requirement) so we consume one unconditionally. The other gated
+  // actions (playCard / attackHero / discardCards / relocateAlly)
+  // consume an icon only when `strictIconMode` is on. The validator
+  // already proved the icon is available.
+  const iconType =
+    action.kind === 'fate' ? 'fate' :
+    state.strictIconMode && action.kind === 'playCard' ? 'play' :
+    state.strictIconMode && action.kind === 'attackHero' ? 'vanquish' :
+    state.strictIconMode && action.kind === 'discardCards' ? 'discard' :
+    state.strictIconMode && action.kind === 'relocateAlly' ? 'move' :
+    null;
+  if (iconType !== null) {
+    const idx = findUnusedIcon(state, iconType);
+    if (idx !== null) {
+      const cloned = cloneState(next);
+      consumeIcon(cloned, idx);
+      next = cloned;
     }
   }
   next = drainTriggers(next);

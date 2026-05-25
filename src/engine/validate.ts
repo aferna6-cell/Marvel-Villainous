@@ -218,7 +218,11 @@ export function isLegal(state: GameState, action: Action): Legality {
       if (opponents.length === 0) {
         return illegal('no opponents to Fate');
       }
-      if (state.strictIconMode && findUnusedIcon(state, 'fate') === null) {
+      // Fate ALWAYS requires an unused, uncovered `fate` icon at the active
+      // player's current location — this matches the printed rulebook and
+      // is on regardless of the optional `strictIconMode` (which gates the
+      // other icon-coupled actions).
+      if (findUnusedIcon(state, 'fate') === null) {
         return illegal('no unused "fate" icon at your current location');
       }
       return true;
