@@ -19,9 +19,13 @@ export function applyDraw(state: GameState, player: PlayerId): GameState {
   const p = s.players[player];
   if (!p) throw new Error('applyDraw: player missing');
 
+  // Helicarrier Alert (Common Fate Event): "Only draw up to 3 cards at the
+  // end of your turn" — caps the per-turn draw at 3, not the hand-size
+  // limit itself.
   const target = getHandSize(p);
+  const helicarrierCap = p.flags['helicarrierActive'] ? 3 : Infinity;
   let drawn = 0;
-  while (p.hand.length < target) {
+  while (p.hand.length < target && drawn < helicarrierCap) {
     reshuffleDeck(s, p);
     const card = p.deck.shift();
     if (card === undefined) break; // deck and discard both empty

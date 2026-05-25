@@ -108,9 +108,14 @@ export function isLegal(state: GameState, action: Action): Legality {
       if (!inHand && !(inDiscard && def.playableFromDiscard)) {
         return illegal('that card is not in hand');
       }
-      // §3/§11: cannot play a card you cannot pay for.
-      if (player.power < def.cost) {
-        return illegal(`not enough power (need ${def.cost}, have ${player.power})`);
+      // §3/§11: cannot play a card you cannot pay for. The effective cost
+      // accounts for in-play Fate surcharges (Lockdown +1 Allies, Protected
+      // Vibranium +1 Items).
+      let effectiveCost = def.cost;
+      if (player.flags['lockdownActive'] && def.type === 'ally') effectiveCost += 1;
+      if (player.flags['protectedVibraniumActive'] && def.type === 'item') effectiveCost += 1;
+      if (player.power < effectiveCost) {
+        return illegal(`not enough power (need ${effectiveCost}, have ${player.power})`);
       }
       // Q2: in strict mode, a Play-a-Card action requires an unused, uncovered
       // `play` icon at the active player's current location.

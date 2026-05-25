@@ -23,6 +23,12 @@ export function applyPlayCard(
   const def = getCard(cardId);
   if (!def) throw new Error(`applyPlayCard: unknown card "${cardId}"`);
 
+  // Surcharge from in-play Fate Events: Lockdown at the Raft (+1 to Allies)
+  // and Protected Vibranium (+1 to Items).
+  let effectiveCost = def.cost;
+  if (player.flags['lockdownActive'] && def.type === 'ally') effectiveCost += 1;
+  if (player.flags['protectedVibraniumActive'] && def.type === 'item') effectiveCost += 1;
+
   const handIdx = player.hand.indexOf(cardId);
   if (handIdx !== -1) {
     player.hand.splice(handIdx, 1);
@@ -38,7 +44,14 @@ export function applyPlayCard(
       });
     }
   }
-  player.power -= def.cost;
+  player.power -= effectiveCost;
+  if (effectiveCost !== def.cost) {
+    s.log.push({
+      turn: s.turn,
+      player: s.activePlayer,
+      message: `surcharge: paid ${effectiveCost} (printed ${def.cost})`,
+    });
+  }
 
   // Pick the destination location: the caller's `target.location` if it
   // names one, otherwise the villain's current location (sensible default).
