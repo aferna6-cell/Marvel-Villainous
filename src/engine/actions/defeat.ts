@@ -45,8 +45,8 @@ export function defeatHero(
   if (movedInstead) {
     // Hulk gets a +1 Strength token and shows up in a *different* villain's
     // Domain. We pick the next seat in player order deterministically.
-    hero.strengthModifier += 1;
     hero.tokens['strength'] = (hero.tokens['strength'] ?? 0) + 1;
+    hero.strengthModifier += 1;
     const others = s.playerOrder.filter((id) => id !== owner);
     const dest = others[(s.turn + 0) % others.length] ?? others[0];
     const destPlayer = dest ? s.players[dest] : undefined;

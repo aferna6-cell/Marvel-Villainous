@@ -182,6 +182,7 @@ export function applyVillainSpecific(
       const hasSword = loc.itemsPresent.some((it) => it.cardId === 'taskmaster-sword');
       if (!hasSword) continue;
       for (const a of loc.alliesPresent) {
+        a.tokens['strength'] = (a.tokens['strength'] ?? 0) + 1;
         a.strengthModifier = (a.strengthModifier ?? 0) + 1;
       }
     }
@@ -251,6 +252,7 @@ export function applyVillainSpecific(
       const loc = p.realm.locations[scottLoc];
       if (loc) {
         for (const a of loc.alliesPresent) {
+          a.tokens['strength'] = (a.tokens['strength'] ?? 0) - 1;
           a.strengthModifier = (a.strengthModifier ?? 0) - 1;
         }
         log(`Scott Lang — all Allies at his location lose 1 Strength (${loc.alliesPresent.length} affected).`);

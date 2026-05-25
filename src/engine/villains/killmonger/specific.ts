@@ -98,6 +98,7 @@ export function applyVillainSpecific(
     let count = 0;
     for (const loc of p.realm.locations) {
       for (const a of loc.alliesPresent) {
+        a.tokens['strength'] = (a.tokens['strength'] ?? 0) + 1;
         a.strengthModifier = (a.strengthModifier ?? 0) + 1;
         count++;
       }

@@ -111,6 +111,7 @@ export function applyCommonFateSpecific(
     let count = 0;
     for (const loc of p.realm.locations) {
       for (const h of loc.heroesPresent) {
+        h.tokens['strength'] = (h.tokens['strength'] ?? 0) + 1;
         h.strengthModifier = (h.strengthModifier ?? 0) + 1;
         count++;
       }
