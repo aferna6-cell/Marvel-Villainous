@@ -137,6 +137,61 @@ describe('UI playthrough — Thanos solo, multi-action turn', () => {
     expect((screen.getByRole('button', { name: /\+ Seat/ }) as HTMLButtonElement).disabled).toBe(true);
   });
 
+  it('drag-and-drop plays a card from hand to a location and removes it from hand', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('link', { name: 'New Game' }));
+    fireEvent.click(screen.getByRole('button', { name: /Solo · thanos/i }));
+
+    // Move into actions phase (need a DIFFERENT location from current).
+    const loc2 = screen.getByText(/^Location 2$/).closest('.location') as HTMLElement;
+    fireEvent.click(loc2);
+    expect(screen.getByText('actions', { selector: 'strong' })).toBeTruthy();
+
+    // Grant power so any card in hand is affordable.
+    const allBtns = screen.getAllByRole('button');
+    const plusPow = allBtns.find((b) => b.textContent === '+Pow');
+    if (!plusPow) throw new Error('no +Pow button');
+    for (let i = 0; i < 6; i++) fireEvent.click(plusPow);
+
+    // Grab the first card chip in the hand.
+    const hand = document.querySelector('.hand');
+    const firstCard = hand?.querySelector('.card') as HTMLElement | null;
+    if (!firstCard) throw new Error('no card in hand');
+    const cardName = firstCard.querySelector('.card__name')?.textContent ?? '';
+    // Set up a DataTransfer-like stub and fire dragstart → dragover → drop.
+    const handBefore = screen.getByText(/Hand · \d cards/).textContent;
+    const dt = {
+      data: new Map<string, string>(),
+      effectAllowed: '',
+      setData(t: string, v: string) {
+        this.data.set(t, v);
+      },
+      getData(t: string) {
+        return this.data.get(t) ?? '';
+      },
+    };
+    fireEvent.dragStart(firstCard, { dataTransfer: dt as unknown as DataTransfer });
+    // After dragStart, the cardId should be set on the dataTransfer. The
+    // engine reads it by `text/cardid` key — the Card component sets it
+    // from `cardId` (the registry id).
+    const cardId = dt.getData('text/cardid');
+    expect(cardId).not.toBe('');
+    // Find Location 2 (where the villain now is) and drop on it. The engine
+    // accepts drops on any location in the active player's realm.
+    fireEvent.dragOver(loc2, { dataTransfer: dt as unknown as DataTransfer });
+    fireEvent.drop(loc2, { dataTransfer: dt as unknown as DataTransfer });
+
+    // Hand should have one fewer card now.
+    const handAfter = screen.getByText(/Hand · \d cards/).textContent;
+    expect(handAfter).not.toBe(handBefore);
+    // And the played card should no longer be in the hand region.
+    if (cardName) {
+      const handCards = hand?.querySelectorAll('.card__name') ?? [];
+      const stillThere = Array.from(handCards).some((n) => n.textContent === cardName);
+      expect(stillThere).toBe(false);
+    }
+  });
+
   it('Quit button returns to the main menu', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('link', { name: 'New Game' }));
