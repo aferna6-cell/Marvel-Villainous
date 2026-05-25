@@ -268,7 +268,61 @@ export function applyVillainSpecific(
     return s;
   }
   if (key === 'killmonger.fate.okoye') {
-    log('Okoye — when played, find DORA MILAJE and play her to the same location as Okoye.');
+    // Find Okoye's location, then find a Dora Milaje and play her to it.
+    let okoyeLoc = -1;
+    for (let i = 0; i < p.realm.locations.length; i++) {
+      const loc = p.realm.locations[i];
+      if (!loc) continue;
+      if (loc.heroesPresent.some((h) => h.cardId === 'fate-killmonger-okoye')) {
+        okoyeLoc = i;
+        break;
+      }
+    }
+    if (okoyeLoc === -1) {
+      log('Okoye — not in play after resolution.');
+      return s;
+    }
+    // Find a Dora Milaje copy in the shared Fate deck / discard.
+    const doraPrefix = 'fate-killmonger-dora-milaje';
+    let source: 'deck' | 'discard' | null = null;
+    let foundId: string | null = null;
+    for (const cid of s.fateDeck) {
+      if (cid.startsWith(doraPrefix)) {
+        foundId = cid;
+        source = 'deck';
+        break;
+      }
+    }
+    if (!foundId) {
+      for (const cid of s.fateDiscard) {
+        if (cid.startsWith(doraPrefix)) {
+          foundId = cid;
+          source = 'discard';
+          break;
+        }
+      }
+    }
+    if (!foundId || !source) {
+      log('Okoye — no Dora Milaje in Fate deck or discard.');
+      return s;
+    }
+    if (source === 'deck') {
+      const idx = s.fateDeck.indexOf(foundId);
+      if (idx !== -1) s.fateDeck.splice(idx, 1);
+    } else {
+      const idx = s.fateDiscard.indexOf(foundId);
+      if (idx !== -1) s.fateDiscard.splice(idx, 1);
+    }
+    const dst = p.realm.locations[okoyeLoc];
+    if (dst) {
+      dst.heroesPresent.push({
+        instanceId: `inst-${++s.instanceCounter}`,
+        cardId: foundId,
+        strengthModifier: 0,
+        tokens: {},
+      });
+    }
+    log(`Okoye — Dora Milaje arrives at her location (from ${source}).`);
     return s;
   }
   if (key === 'killmonger.fate.shuri') {
@@ -298,7 +352,50 @@ export function applyVillainSpecific(
     return s;
   }
   if (key === 'killmonger.fate.wakandaForever') {
-    log("Wakanda Forever — find BLACK PANTHER and play/relocate him to Killmonger's Domain; if already in play, +1 Strength token on him.");
+    const bpId = 'fate-killmonger-black-panther';
+    // Is Black Panther already in any realm? If so, +1 Str token on him.
+    let inPlay = false;
+    for (const id of s.playerOrder) {
+      const other = s.players[id];
+      if (!other) continue;
+      for (const loc of other.realm.locations) {
+        for (const h of loc.heroesPresent) {
+          if (h.cardId === bpId) {
+            h.tokens['strength'] = (h.tokens['strength'] ?? 0) + 1;
+            h.strengthModifier = (h.strengthModifier ?? 0) + 1;
+            inPlay = true;
+          }
+        }
+      }
+    }
+    if (inPlay) {
+      log('Wakanda Forever — Black Panther is in play; +1 Strength token.');
+      return s;
+    }
+    // Not in play: pull from Fate deck or Fate discard and place at p's
+    // villain's current location (Killmonger's Domain).
+    let source: 'deck' | 'discard' | null = null;
+    let idx = s.fateDeck.indexOf(bpId);
+    if (idx !== -1) source = 'deck';
+    else {
+      idx = s.fateDiscard.indexOf(bpId);
+      if (idx !== -1) source = 'discard';
+    }
+    if (!source) {
+      log('Wakanda Forever — Black Panther not in deck or discard.');
+      return s;
+    }
+    if (source === 'deck') s.fateDeck.splice(idx, 1);
+    else s.fateDiscard.splice(idx, 1);
+    const dest = p.realm.locations[p.realm.villainTokenAt];
+    if (!dest) return s;
+    dest.heroesPresent.push({
+      instanceId: `inst-${++s.instanceCounter}`,
+      cardId: bpId,
+      strengthModifier: 0,
+      tokens: {},
+    });
+    log(`Wakanda Forever — Black Panther arrives at Killmonger's location.`);
     return s;
   }
   if (key === 'killmonger.fate.stolenAntiquities') {
