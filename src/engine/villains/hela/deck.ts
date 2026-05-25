@@ -21,8 +21,9 @@ export const helaDeck: CardDef[] = [
   ...copies('hela-disir', 4, {
     villain: 'hela', name: 'Dísir', type: 'ally', cost: 2, strength: 3,
     text: 'DÍSIR may be played from your discard pile.',
-    effects: [{ op: 'villainSpecific', key: 'hela.disir.playFromDiscard', payload: null }],
+    effects: [],
     tags: ['asgard', 'undead'], icons: [],
+    playableFromDiscard: true,
   }),
   ...copies('hela-draugr-swordsman', 4, {
     villain: 'hela', name: 'Draugr Swordsman', type: 'ally', cost: 1, strength: 2,

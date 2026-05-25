@@ -68,6 +68,14 @@ export interface CardDef {
    * drawn from Fate. Untargeted (Global) Events have no constraint.
    */
   targetedVillain?: VillainKey;
+  /**
+   * Some Allies (Crossbones, Dísir) and the Hela specialty Raise the
+   * Dead's referenced Draugr Swordsman may be played directly from the
+   * discard pile. The engine permits a `playCard` action sourcing this
+   * card from `discard` when the flag is true. The card is consumed from
+   * the discard pile instead of the hand.
+   */
+  playableFromDiscard?: boolean;
 }
 
 /** A card instance physically present in a realm. */

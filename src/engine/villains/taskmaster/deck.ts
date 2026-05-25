@@ -51,8 +51,9 @@ export const taskmasterDeck: CardDef[] = [
     id: 'taskmaster-crossbones',
     villain: 'taskmaster', name: 'Crossbones', type: 'ally', cost: 2, strength: 3,
     text: 'CROSSBONES may be played from your discard pile.',
-    effects: [{ op: 'villainSpecific', key: 'taskmaster.crossbones.playFromDiscard', payload: null }],
+    effects: [],
     tags: ['merc'], icons: [],
+    playableFromDiscard: true,
   },
   {
     id: 'taskmaster-death-shield',

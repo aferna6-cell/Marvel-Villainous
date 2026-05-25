@@ -531,11 +531,19 @@ function resolveDeferred(state: GameState, prompt: Prompt, choice: PromptChoice)
     case 'addToHandFromDiscard':
     case 'pickEffectFromDiscard': {
       if (choice.kind !== 'card') break;
-      const idx = p.discard.indexOf(choice.cardId);
-      if (idx === -1) break;
-      p.discard.splice(idx, 1);
-      p.hand.push(choice.cardId);
-      log(`returned ${choice.cardId} from discard to hand`);
+      const discardIdx = p.discard.indexOf(choice.cardId);
+      if (discardIdx !== -1) {
+        p.discard.splice(discardIdx, 1);
+        p.hand.push(choice.cardId);
+        log(`returned ${choice.cardId} from discard to hand`);
+        break;
+      }
+      const deckIdx = p.deck.indexOf(choice.cardId);
+      if (deckIdx !== -1) {
+        p.deck.splice(deckIdx, 1);
+        p.hand.push(choice.cardId);
+        log(`found ${choice.cardId} from deck and added to hand`);
+      }
       break;
     }
     case 'giveStoneToOpponent': {

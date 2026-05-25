@@ -152,11 +152,43 @@ export function applyVillainSpecific(
     return s;
   }
   if (key === 'killmonger.rage') {
-    log("Rage of K'liluna — before moving, you may discard a card to find Killmonger's Fury and add it to your hand.");
+    // Reveal from deck until KILLMONGER'S FURY appears; add to hand. The
+    // player must discard a card from hand first (resolved manually).
+    const revealed: string[] = [];
+    let found: string | null = null;
+    while (p.deck.length > 0) {
+      const top = p.deck.shift();
+      if (!top) break;
+      if (top.startsWith('killmonger-fury-')) {
+        found = top;
+        break;
+      }
+      revealed.push(top);
+    }
+    for (const c of revealed) p.discard.push(c);
+    if (found) {
+      p.hand.push(found);
+      log(`Rage of K'liluna — found "${found}" after revealing ${revealed.length} card(s).`);
+    } else {
+      log(`Rage of K'liluna — no Killmonger's Fury in deck (${revealed.length} discarded).`);
+    }
     return s;
   }
   if (key === 'killmonger.stolenWisdom') {
-    log('Stolen Wisdom — if you have ≤3 cards in hand at turn end, you may reveal until 2 Items appear and add them to your hand.');
+    // Reveal cards from deck until 2 Items are revealed; add them to hand,
+    // discard the rest.
+    const revealed: string[] = [];
+    const items: string[] = [];
+    while (p.deck.length > 0 && items.length < 2) {
+      const top = p.deck.shift();
+      if (!top) break;
+      const cdef = getCard(top);
+      if (cdef?.type === 'item') items.push(top);
+      else revealed.push(top);
+    }
+    for (const c of revealed) p.discard.push(c);
+    for (const it of items) p.hand.push(it);
+    log(`Stolen Wisdom — revealed ${revealed.length} non-Item(s), drew ${items.length} Item(s).`);
     return s;
   }
 

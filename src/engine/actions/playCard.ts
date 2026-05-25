@@ -24,7 +24,20 @@ export function applyPlayCard(
   if (!def) throw new Error(`applyPlayCard: unknown card "${cardId}"`);
 
   const handIdx = player.hand.indexOf(cardId);
-  if (handIdx !== -1) player.hand.splice(handIdx, 1);
+  if (handIdx !== -1) {
+    player.hand.splice(handIdx, 1);
+  } else if (def.playableFromDiscard) {
+    // Crossbones / Dísir: may be played directly from the discard pile.
+    const discardIdx = player.discard.indexOf(cardId);
+    if (discardIdx !== -1) {
+      player.discard.splice(discardIdx, 1);
+      s.log.push({
+        turn: s.turn,
+        player: s.activePlayer,
+        message: `played ${cardId} directly from discard pile`,
+      });
+    }
+  }
   player.power -= def.cost;
 
   // Pick the destination location: the caller's `target.location` if it

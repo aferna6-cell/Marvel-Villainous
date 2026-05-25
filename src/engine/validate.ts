@@ -101,11 +101,13 @@ export function isLegal(state: GameState, action: Action): Legality {
     case 'playCard': {
       if (state.phase !== 'actions') return illegal('can only play cards during the actions phase');
       const player = activePlayerState(state);
-      if (!player.hand.includes(action.cardId)) {
-        return illegal('that card is not in hand');
-      }
       const def = getCard(action.cardId);
       if (!def) return illegal(`unknown card "${action.cardId}"`);
+      const inHand = player.hand.includes(action.cardId);
+      const inDiscard = player.discard.includes(action.cardId);
+      if (!inHand && !(inDiscard && def.playableFromDiscard)) {
+        return illegal('that card is not in hand');
+      }
       // §3/§11: cannot play a card you cannot pay for.
       if (player.power < def.cost) {
         return illegal(`not enough power (need ${def.cost}, have ${player.power})`);

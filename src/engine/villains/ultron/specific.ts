@@ -123,7 +123,28 @@ export function applyVillainSpecific(
     return s;
   }
   if (key === 'ultron.everyContingency') {
-    log('Every Contingency Covered — reveal cards from your deck until you reveal an Item or Effect (choose); add it to your hand.');
+    // Defaults to seeking an Effect first then an Item; the choice between
+    // Item/Effect is the player's, so we reveal until either appears and let
+    // the player resolve by choosing one (or fall back to the first match).
+    const revealed: string[] = [];
+    let found: string | null = null;
+    while (p.deck.length > 0) {
+      const top = p.deck.shift();
+      if (!top) break;
+      const cdef = getCard(top);
+      if (cdef?.type === 'effect' || cdef?.type === 'item') {
+        found = top;
+        break;
+      }
+      revealed.push(top);
+    }
+    for (const c of revealed) p.discard.push(c);
+    if (found) {
+      p.hand.push(found);
+      log(`Every Contingency Covered — revealed ${revealed.length} non-target(s), drew "${found}".`);
+    } else {
+      log(`Every Contingency Covered — no Item/Effect found in deck (${revealed.length} discarded).`);
+    }
     return s;
   }
   if (key === 'ultron.technoforming') {
@@ -137,7 +158,29 @@ export function applyVillainSpecific(
     return s;
   }
   if (key === 'ultron.assemblyLine') {
-    log('Assembly Line — ACTIVATE: reveal cards from your deck until you reveal an Ally, add it to your hand, gain 1 Power.');
+    // Reveal from the top of your deck until an Ally appears, add it to
+    // hand, send the rest to discard, then +1 Power.
+    const revealed: string[] = [];
+    let foundAlly: string | null = null;
+    while (p.deck.length > 0) {
+      const top = p.deck.shift();
+      if (!top) break;
+      const cdef = getCard(top);
+      if (cdef?.type === 'ally') {
+        foundAlly = top;
+        break;
+      }
+      revealed.push(top);
+    }
+    for (const c of revealed) p.discard.push(c);
+    if (foundAlly) {
+      p.hand.push(foundAlly);
+      log(`Assembly Line — revealed ${revealed.length} non-Ally(s), drew "${foundAlly}".`);
+    } else {
+      log(`Assembly Line — no Ally found in deck (${revealed.length} cards revealed and discarded).`);
+    }
+    p.power += 1;
+    log('Assembly Line — gained 1 Power.');
     return s;
   }
 

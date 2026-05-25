@@ -191,7 +191,35 @@ export function applyVillainSpecific(
 
   // ----- Specialties ------------------------------------------------------
   if (key === 'taskmaster.lessonPlan') {
-    log('Lesson Plan — ACTIVATE: pay 1 Power, find an Item or Effect in your discard pile or deck and add to hand.');
+    // Pay 1 Power up-front, then park a prompt offering every Item/Effect
+    // in your discard pile or deck; pick one to add to hand.
+    if (p.power < 1) {
+      log('Lesson Plan — not enough Power (need 1).');
+      return s;
+    }
+    p.power -= 1;
+    const choices: PromptChoice[] = [];
+    const seen = new Set<string>();
+    for (const id of [...p.discard, ...p.deck]) {
+      if (seen.has(id)) continue;
+      seen.add(id);
+      const cdef = getCard(id);
+      if (cdef?.type === 'item' || cdef?.type === 'effect') {
+        choices.push({ kind: 'card', cardId: id });
+      }
+    }
+    if (choices.length === 0) {
+      log('Lesson Plan — no Item or Effect in deck/discard.');
+      return s;
+    }
+    s.pendingPrompt = {
+      id: `prompt-${s.turn}-${s.log.length}`,
+      player: ctx.player,
+      kind: 'chooseCard',
+      message: 'Lesson Plan — choose an Item or Effect to add to hand (from deck or discard)',
+      choices: [...choices, { kind: 'skip' }],
+      continuation: { kind: 'deferred', tag: 'pickEffectFromDiscard' },
+    };
     return s;
   }
   if (key === 'taskmaster.photographicReflexes') {
