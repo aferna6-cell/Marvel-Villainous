@@ -606,6 +606,29 @@ function resolveDeferred(state: GameState, prompt: Prompt, choice: PromptChoice)
       log(`attached ${item.card.cardId} to ${target.card.cardId}`);
       break;
     }
+    case 'activateItem': {
+      if (choice.kind !== 'card') break;
+      const found = findInstance(p, choice.cardId);
+      if (!found) {
+        log(`activate: instance "${choice.cardId}" not found`);
+        break;
+      }
+      const def = getCard(found.card.cardId);
+      if (!def?.activateEffects?.length) {
+        log(`activate: ${found.card.cardId} has no activate effects`);
+        break;
+      }
+      log(`ACTIVATE ${found.card.cardId} at location ${found.loc + 1}`);
+      const ctx: EffectContext = {
+        player: prompt.player,
+        sourceCardId: found.card.cardId,
+        location: found.loc as 0 | 1 | 2 | 3,
+      };
+      // applyEffects is the public effect interpreter; it accepts an
+      // EffectSpec[] and returns the post-resolution state. Running it
+      // synchronously here threads the resolved state through.
+      return applyEffects(s, def.activateEffects, ctx);
+    }
     case 'pickAlly':
       // Lightweight: just log; meant to be a payload-driven trigger that
       // downstream handlers can interpret. Most actual ally-pick flows use

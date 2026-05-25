@@ -89,7 +89,8 @@ export const helaDeck: CardDef[] = [
   ...copies('hela-nightsword', 2, {
     villain: 'hela', name: 'Nightsword', type: 'item', cost: 2,
     text: 'ACTIVATE: Attach a Soul Mark to any Hero without one at this location.',
-    effects: [{ op: 'villainSpecific', key: 'hela.nightsword.activate', payload: null }],
+    effects: [],
+    activateEffects: [{ op: 'villainSpecific', key: 'hela.nightsword.activate', payload: null }],
     tags: [], icons: ['activate'],
   }),
 
@@ -98,7 +99,8 @@ export const helaDeck: CardDef[] = [
     id: 'hela-hand-of-glory',
     villain: 'hela', name: 'Hand of Glory', type: 'specialty', cost: 2,
     text: "ACTIVATE: Choose a Hero from the Fate discard pile. Pay Power equal to their Strength, then play them to any Domain and attach a Soul Mark to them.",
-    effects: [{ op: 'villainSpecific', key: 'hela.handOfGlory', payload: null }],
+    effects: [],
+    activateEffects: [{ op: 'villainSpecific', key: 'hela.handOfGlory', payload: null }],
     tags: [], icons: ['activate'],
   },
   {

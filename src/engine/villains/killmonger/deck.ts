@@ -103,7 +103,8 @@ export const killmongerDeck: CardDef[] = [
     id: 'killmonger-hacking-rig',
     villain: 'killmonger', name: 'Hacking Rig', type: 'item', cost: 2,
     text: 'ACTIVATE: You cannot activate HACKING RIG if you have the most Power. Gain Power equal to half the amount held by the player with the most Power rounded up.',
-    effects: [{ op: 'villainSpecific', key: 'killmonger.hackingRig', payload: null }],
+    effects: [],
+    activateEffects: [{ op: 'villainSpecific', key: 'killmonger.hackingRig', payload: null }],
     tags: [], icons: ['activate'],
   },
 

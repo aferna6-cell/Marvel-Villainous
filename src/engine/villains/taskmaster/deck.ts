@@ -113,7 +113,8 @@ export const taskmasterDeck: CardDef[] = [
   ...copies('taskmaster-training-dummy', 2, {
     villain: 'taskmaster', name: 'Training Dummy', type: 'item', cost: 1,
     text: 'ACTIVATE: Place a +1 Strength token on an Ally you control at this location.',
-    effects: [{ op: 'villainSpecific', key: 'taskmaster.trainingDummy', payload: null }],
+    effects: [],
+    activateEffects: [{ op: 'villainSpecific', key: 'taskmaster.trainingDummy', payload: null }],
     tags: [], icons: ['activate'],
   }),
   {
@@ -143,14 +144,16 @@ export const taskmasterDeck: CardDef[] = [
     id: 'taskmaster-lesson-plan',
     villain: 'taskmaster', name: 'Lesson Plan', type: 'specialty', cost: 1,
     text: 'ACTIVATE: Pay 1 Power. Find an Item or Effect in your discard pile or deck and put that card into your hand.',
-    effects: [{ op: 'villainSpecific', key: 'taskmaster.lessonPlan', payload: null }],
+    effects: [],
+    activateEffects: [{ op: 'villainSpecific', key: 'taskmaster.lessonPlan', payload: null }],
     tags: [], icons: ['activate'],
   },
   {
     id: 'taskmaster-photographic-reflexes',
     villain: 'taskmaster', name: 'Photographic Reflexes', type: 'specialty', cost: 2,
     text: "After another player plays an Effect card from their hand, you may immediately pay 1 Power to attach that Effect to PHOTOGRAPHIC REFLEXES. ACTIVATE: Use an activate action to play the Effect attached to PHOTOGRAPHIC REFLEXES, then discard the Effect to its original Villain's discard pile.",
-    effects: [{ op: 'villainSpecific', key: 'taskmaster.photographicReflexes', payload: null }],
+    effects: [],
+    activateEffects: [{ op: 'villainSpecific', key: 'taskmaster.photographicReflexes', payload: null }],
     tags: [], icons: ['activate'],
   },
 ];

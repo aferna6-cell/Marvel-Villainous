@@ -76,6 +76,15 @@ export interface CardDef {
    * the discard pile instead of the hand.
    */
   playableFromDiscard?: boolean;
+  /**
+   * Effects that resolve when the card is the target of an ACTIVATE
+   * action (only Items / Specialties carry these). Distinct from
+   * `effects[]` which resolve on play. When the active player spends an
+   * `activate` icon, they pick an in-play Item/Specialty at their
+   * villain's current location with non-empty `activateEffects` and the
+   * engine runs them.
+   */
+  activateEffects?: EffectSpec[];
 }
 
 /** A card instance physically present in a realm. */
@@ -227,6 +236,7 @@ export type DeferredTag =
   | 'tasteCosmic' // taste-of-cosmic-power follow-up (boost + free vanquish)
   | 'attachItem' // pick an Ally/Hero to attach an Item to; payload.itemInstanceId
   | 'pickEffectFromDiscard' // pick an Effect from discard to return to hand (Warp Reality, Lesson Plan)
+  | 'activateItem' // pick an in-play Item/Specialty to fire its activateEffects[]
   | 'pickAlly'; // pick one of your Allies (handler reads payload.purpose)
 
 // --- Players & game state --------------------------------------------------

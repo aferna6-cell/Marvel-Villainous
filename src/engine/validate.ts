@@ -126,6 +126,35 @@ export function isLegal(state: GameState, action: Action): Legality {
       const realm = activePlayerState(state).realm;
       const hero = findInPlay(realm.locations, action.heroId, 'hero');
       if (!hero) return illegal('that hero is not in play');
+
+      // PROTECTOR enforcement: a Hero with PROTECTOR must be defeated before
+      // any other Hero at the same location may be targeted. Heroes count as
+      // PROTECTOR if their CardDef has tag 'protector', OR carry a runtime
+      // `tokens.protector` marker (Odin-Force attach grants this).
+      const targetCard = hero.card;
+      const targetDef = getCard(targetCard.cardId);
+      const targetIsProtector =
+        targetDef?.tags?.includes('protector') === true ||
+        (targetCard.tokens?.['protector'] ?? 0) > 0;
+      if (!targetIsProtector) {
+        const sameLoc = realm.locations[hero.location];
+        if (sameLoc) {
+          const blockingProtector = sameLoc.heroesPresent.find((h) => {
+            if (h.instanceId === targetCard.instanceId) return false;
+            const def = getCard(h.cardId);
+            return (
+              def?.tags?.includes('protector') === true ||
+              (h.tokens?.['protector'] ?? 0) > 0
+            );
+          });
+          if (blockingProtector) {
+            return illegal(
+              `a PROTECTOR Hero (${blockingProtector.cardId}) must be defeated first`,
+            );
+          }
+        }
+      }
+
       const seen = new Set<string>();
       for (const id of action.allyIds) {
         if (seen.has(id)) return illegal(`ally "${id}" listed twice`);

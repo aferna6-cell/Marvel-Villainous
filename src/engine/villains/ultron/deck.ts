@@ -98,7 +98,8 @@ export const ultronDeck: CardDef[] = [
   ...copies('ultron-assembly-line', 2, {
     villain: 'ultron', name: 'Assembly Line', type: 'item', cost: 1,
     text: 'ACTIVATE: Reveal cards from your deck until you reveal an Ally. Add that card to your hand. Gain 1 Power.',
-    effects: [{ op: 'villainSpecific', key: 'ultron.assemblyLine', payload: null }],
+    effects: [],
+    activateEffects: [{ op: 'villainSpecific', key: 'ultron.assemblyLine', payload: null }],
     tags: [], icons: ['activate'],
   }),
 ];
