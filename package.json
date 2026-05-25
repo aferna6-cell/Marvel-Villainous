@@ -16,7 +16,8 @@
     "format": "prettier --write .",
     "electron:dev": "pnpm dev",
     "electron:build": "pnpm build && electron-builder",
-    "cards": "node --import tsx/esm scripts/gen-cards-catalog.mjs"
+    "cards": "node --import tsx/esm scripts/gen-cards-catalog.mjs",
+    "smoke:electron": "pnpm build && xvfb-run -a node node_modules/electron/cli.js --no-sandbox scripts/electron-smoke.cjs"
   },
   "dependencies": {
     "react": "^18.3.1",
