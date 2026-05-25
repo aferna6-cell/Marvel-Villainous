@@ -1,6 +1,7 @@
 // Hela `villainSpecific` keys.
 
 import { cloneState } from '../../util';
+import { getCard } from '../../cards/registry';
 import { applyCommonFateSpecific } from '../common/specific';
 import type { EffectContext, GameState, PromptChoice } from '../../types';
 
@@ -124,19 +125,114 @@ export function applyVillainSpecific(
 
   // ----- Effects ----------------------------------------------------------
   if (key === 'hela.deathsEmbrace') {
-    log("Death's Embrace — relocate a Hero with an attached Soul Mark to Niflheim (use the Move-hero action then advance the Asgard counter).");
+    // Relocate a marked Hero to "Niflheim" — engine convention: location 0
+    // of Hela's Domain (her starting location). The Asgard counter has
+    // already been bumped when the Soul Mark was attached, so this is just
+    // a movement.
+    const markedChoices: PromptChoice[] = [];
+    for (const id of s.playerOrder) {
+      const other = s.players[id];
+      if (!other) continue;
+      for (const loc of other.realm.locations) {
+        for (const h of loc.heroesPresent) {
+          if (h.soulMark) markedChoices.push({ kind: 'card', cardId: h.instanceId });
+        }
+      }
+    }
+    if (markedChoices.length === 0) {
+      log("Death's Embrace — no marked Hero in any Domain.");
+      return s;
+    }
+    s.pendingPrompt = {
+      id: `prompt-${s.turn}-${s.log.length}`,
+      player: ctx.player,
+      kind: 'chooseCard',
+      message: "Death's Embrace — relocate a marked Hero to Niflheim (Hela's loc 0)",
+      choices: [...markedChoices, { kind: 'skip' }],
+      continuation: {
+        kind: 'deferred',
+        tag: 'crossRealmCharacter',
+        payload: { purpose: 'relocateHero', toOwner: ctx.player, toLocation: 0 },
+      },
+    };
     return s;
   }
   if (key === 'hela.helToPay') {
-    log("Hel to Pay — choose a Hero in your Domain with a Soul Mark and Vanquish him (right-click + ObjectiveTracker +).");
+    // Defeat a marked Hero in Hela's Domain. Picks one to remove.
+    const myMarked: PromptChoice[] = [];
+    for (const loc of p.realm.locations) {
+      for (const h of loc.heroesPresent) {
+        if (h.soulMark) myMarked.push({ kind: 'card', cardId: h.instanceId });
+      }
+    }
+    if (myMarked.length === 0) {
+      log('Hel to Pay — no marked Hero in your Domain.');
+      return s;
+    }
+    s.pendingPrompt = {
+      id: `prompt-${s.turn}-${s.log.length}`,
+      player: ctx.player,
+      kind: 'chooseCard',
+      message: 'Hel to Pay — Vanquish a marked Hero in your Domain',
+      choices: [...myMarked, { kind: 'skip' }],
+      continuation: { kind: 'deferred', tag: 'defeatCharacter' },
+    };
     return s;
   }
   if (key === 'hela.priceOfLife') {
-    log("Price of Life — remove a Soul Mark from a Hero in another player's Domain, then gain Power equal to that Hero's Strength.");
+    // Choose a marked Hero in an OPPONENT's Domain; remove the mark; gain
+    // Power equal to Hero strength.
+    const choices: PromptChoice[] = [];
+    for (const id of s.playerOrder) {
+      if (id === ctx.player) continue;
+      const other = s.players[id];
+      if (!other) continue;
+      for (const loc of other.realm.locations) {
+        for (const h of loc.heroesPresent) {
+          if (h.soulMark) choices.push({ kind: 'card', cardId: h.instanceId });
+        }
+      }
+    }
+    if (choices.length === 0) {
+      log('Price of Life — no marked Hero in any opponent Domain.');
+      return s;
+    }
+    s.pendingPrompt = {
+      id: `prompt-${s.turn}-${s.log.length}`,
+      player: ctx.player,
+      kind: 'chooseCard',
+      message: "Price of Life — remove a Soul Mark in an opponent's Domain (gain Power = Hero's Strength)",
+      choices: [...choices, { kind: 'skip' }],
+      continuation: { kind: 'deferred', tag: 'priceOfLife' },
+    };
     return s;
   }
   if (key === 'hela.soulForASoul') {
-    log("Soul for a Soul — remove a marked Hero from any Domain; if you do, defeat a Hero in Hela's Domain.");
+    // Remove a marked Hero from any Domain — then defeat a Hero in Hela's
+    // Domain. Done as a 2-step: first pick the marked hero (anywhere), then
+    // pick one of Hela's heroes to defeat.
+    const choices: PromptChoice[] = [];
+    for (const id of s.playerOrder) {
+      const other = s.players[id];
+      if (!other) continue;
+      for (const loc of other.realm.locations) {
+        for (const h of loc.heroesPresent) {
+          if (h.soulMark) choices.push({ kind: 'card', cardId: h.instanceId });
+        }
+      }
+    }
+    if (choices.length === 0) {
+      log('Soul for a Soul — no marked Hero in any Domain.');
+      return s;
+    }
+    s.pendingPrompt = {
+      id: `prompt-${s.turn}-${s.log.length}`,
+      player: ctx.player,
+      kind: 'chooseCard',
+      message: 'Soul for a Soul — remove a marked Hero from any Domain',
+      choices: [...choices, { kind: 'skip' }],
+      continuation: { kind: 'deferred', tag: 'soulForASoul' },
+    };
     return s;
   }
 
@@ -186,15 +282,64 @@ export function applyVillainSpecific(
     return s;
   }
   if (key === 'hela.fate.balder') {
-    log('Balder — Soul Marks cannot be attached to him. When played, remove a Soul Mark from any one Hero.');
+    // Park a prompt for the player to pick any marked Hero to unmark.
+    const markedChoices: PromptChoice[] = [];
+    for (const id of s.playerOrder) {
+      const other = s.players[id];
+      if (!other) continue;
+      for (const loc of other.realm.locations) {
+        for (const h of loc.heroesPresent) {
+          if (h.soulMark) markedChoices.push({ kind: 'card', cardId: h.instanceId });
+        }
+      }
+    }
+    if (markedChoices.length === 0) {
+      log('Balder — no marked Hero to unmark.');
+      return s;
+    }
+    s.pendingPrompt = {
+      id: `prompt-${s.turn}-${s.log.length}`,
+      player: ctx.player,
+      kind: 'chooseCard',
+      message: 'Balder — remove a Soul Mark from any one Hero',
+      choices: [...markedChoices, { kind: 'skip' }],
+      continuation: { kind: 'deferred', tag: 'removeSoulMark' },
+    };
     return s;
   }
   if (key === 'hela.fate.intervenes') {
-    log("Fate Intervenes — shuffle the targeted player's discard pile into their Villain deck.");
+    // Shuffle Hela's (the targeted villain's) discard into her deck.
+    // Hela is the targeted villain — the active player picks the target,
+    // but in single-target Fate effects the target is the active player
+    // (Hela's victim). For simplicity, shuffle the Fated-on player's
+    // discard back into their deck. Since this handler runs in context
+    // of the Fate resolution, ctx.player is the targeted Villain.
+    const all = [...p.discard, ...p.deck];
+    p.discard = [];
+    p.deck = all;
+    log(`Fate Intervenes — shuffled ${all.length} cards from discard back into deck`);
     return s;
   }
   if (key === 'hela.fate.reviveSouls') {
-    log("Revive Souls — choose a Hero in the Fate discard pile; play that Hero to the targeted player's Domain.");
+    // Pick a Hero from the shared Fate discard and play to the targeted
+    // player's Domain at their villain's current location.
+    const heroIds: PromptChoice[] = [];
+    for (const cid of s.fateDiscard) {
+      const def = getCard(cid);
+      if (def?.type === 'hero') heroIds.push({ kind: 'card', cardId: cid });
+    }
+    if (heroIds.length === 0) {
+      log('Revive Souls — no Hero in the Fate discard.');
+      return s;
+    }
+    s.pendingPrompt = {
+      id: `prompt-${s.turn}-${s.log.length}`,
+      player: ctx.player,
+      kind: 'chooseCard',
+      message: 'Revive Souls — play a Hero from the Fate discard to your Domain',
+      choices: [...heroIds, { kind: 'skip' }],
+      continuation: { kind: 'deferred', tag: 'reviveSouls' },
+    };
     return s;
   }
   if (key === 'hela.fate.conquerValhalla') {
@@ -203,7 +348,29 @@ export function applyVillainSpecific(
     return s;
   }
   if (key === 'hela.fate.odinForce') {
-    log('Odin-Force — attach to a Hero: remove any Soul Mark, no Soul Mark may be attached, gains PROTECTOR.');
+    // Attach to any Hero in any Domain.
+    const choices: PromptChoice[] = [];
+    for (const id of s.playerOrder) {
+      const other = s.players[id];
+      if (!other) continue;
+      for (const loc of other.realm.locations) {
+        for (const h of loc.heroesPresent) {
+          choices.push({ kind: 'card', cardId: h.instanceId });
+        }
+      }
+    }
+    if (choices.length === 0) {
+      log('Odin-Force — no Hero to attach to.');
+      return s;
+    }
+    s.pendingPrompt = {
+      id: `prompt-${s.turn}-${s.log.length}`,
+      player: ctx.player,
+      kind: 'chooseCard',
+      message: 'Odin-Force — attach to a Hero (remove their Soul Mark; gains PROTECTOR; cannot be marked)',
+      choices: [...choices, { kind: 'skip' }],
+      continuation: { kind: 'deferred', tag: 'attachOdinForce' },
+    };
     return s;
   }
 

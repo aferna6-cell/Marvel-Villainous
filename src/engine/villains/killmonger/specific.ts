@@ -2,6 +2,7 @@
 
 import { cloneState } from '../../util';
 import { getCard } from '../../cards/registry';
+import { applyActivate } from '../../actions/activate';
 import { applyCommonFateSpecific } from '../common/specific';
 import type { EffectContext, GameState, PromptChoice } from '../../types';
 
@@ -44,7 +45,41 @@ export function applyVillainSpecific(
     return s;
   }
   if (key === 'killmonger.king.dragItem') {
-    log('King — when played, you may relocate an unattached Item you control to his location.');
+    let kingLoc = -1;
+    for (let i = 0; i < p.realm.locations.length; i++) {
+      const loc = p.realm.locations[i];
+      if (!loc) continue;
+      if (loc.alliesPresent.some((a) => a.cardId === 'killmonger-king')) {
+        kingLoc = i;
+        break;
+      }
+    }
+    if (kingLoc === -1) {
+      log('King — not in play after resolution.');
+      return s;
+    }
+    const choices: PromptChoice[] = [];
+    for (const loc of p.realm.locations) {
+      for (const it of loc.itemsPresent) {
+        if (!it.attachedTo) choices.push({ kind: 'card', cardId: it.instanceId });
+      }
+    }
+    if (choices.length === 0) {
+      log('King — no unattached Item to relocate.');
+      return s;
+    }
+    s.pendingPrompt = {
+      id: `prompt-${s.turn}-${s.log.length}`,
+      player: ctx.player,
+      kind: 'chooseCard',
+      message: "King — relocate an unattached Item to his location",
+      choices: [...choices, { kind: 'skip' }],
+      continuation: {
+        kind: 'deferred',
+        tag: 'crossRealmCharacter',
+        payload: { purpose: 'relocateItem', toOwner: ctx.player, toLocation: kingLoc },
+      },
+    };
     return s;
   }
   if (key === 'killmonger.rook.bodyguard') {
@@ -87,11 +122,29 @@ export function applyVillainSpecific(
     return s;
   }
   if (key === 'killmonger.executePlan') {
-    log('Execute Plan — perform an activate action (use an Activate icon at your location).');
-    return s;
+    // "Perform an activate action": route to the same handler the icon uses.
+    return applyActivate(s, ctx.player, 'activate');
   }
   if (key === 'killmonger.taunt') {
-    log('Taunt — relocate any character in your Domain to a different location in your Domain.');
+    // Relocate any character in your Domain to a different location in your
+    // Domain. Two-step: pick a character, then pick destination.
+    const choices: PromptChoice[] = [];
+    for (const loc of p.realm.locations) {
+      for (const a of loc.alliesPresent) choices.push({ kind: 'card', cardId: a.instanceId });
+      for (const h of loc.heroesPresent) choices.push({ kind: 'card', cardId: h.instanceId });
+    }
+    if (choices.length === 0) {
+      log('Taunt — no character in your Domain.');
+      return s;
+    }
+    s.pendingPrompt = {
+      id: `prompt-${s.turn}-${s.log.length}`,
+      player: ctx.player,
+      kind: 'chooseCard',
+      message: 'Taunt — pick a character to relocate within your Domain',
+      choices: [...choices, { kind: 'skip' }],
+      continuation: { kind: 'deferred', tag: 'tauntPickCharacter' },
+    };
     return s;
   }
   if (key === 'killmonger.overpower') {
@@ -113,11 +166,79 @@ export function applyVillainSpecific(
     return s;
   }
   if (key === 'killmonger.explosives') {
-    log('Explosives — remove this Item to defeat up to two characters at this location (each Strength 4 or less).');
+    // Find the Explosives item that triggered this — convention: this fires
+    // when ACTIVATE-ing it, so the player's villain location holds it.
+    const loc = p.realm.locations[p.realm.villainTokenAt];
+    if (!loc) return s;
+    const exploding = loc.itemsPresent.find((it) => it.cardId.startsWith('killmonger-explosives'));
+    if (!exploding) {
+      log('Explosives — no Explosives at your location to detonate.');
+      return s;
+    }
+    const choices: PromptChoice[] = [];
+    for (const a of loc.alliesPresent) {
+      const def = getCard(a.cardId);
+      if ((def?.strength ?? 99) <= 4) choices.push({ kind: 'card', cardId: a.instanceId });
+    }
+    for (const h of loc.heroesPresent) {
+      const def = getCard(h.cardId);
+      if ((def?.strength ?? 99) <= 4) choices.push({ kind: 'card', cardId: h.instanceId });
+    }
+    if (choices.length === 0) {
+      log('Explosives — no eligible character (Str ≤4) at this location.');
+      return s;
+    }
+    s.pendingPrompt = {
+      id: `prompt-${s.turn}-${s.log.length}`,
+      player: ctx.player,
+      kind: 'chooseCard',
+      message: 'Explosives — pick the first character (Str ≤4) at this location to defeat',
+      choices: [...choices, { kind: 'skip' }],
+      continuation: {
+        kind: 'deferred',
+        tag: 'explosivesDefeat',
+        payload: { explosivesInstance: exploding.instanceId, alreadyDefeated: [] },
+      },
+    };
     return s;
   }
   if (key === 'killmonger.wound') {
-    log('Wound — attach to a character you do not control; they lose 2 Strength.');
+    // Find Wound instance at villain location. Park a prompt to attach.
+    const loc = p.realm.locations[p.realm.villainTokenAt];
+    if (!loc) return s;
+    const wound = loc.itemsPresent.find((it) => it.cardId.startsWith('killmonger-wound') && !it.attachedTo);
+    if (!wound) {
+      log('Wound — no unattached Wound at your location.');
+      return s;
+    }
+    const choices: PromptChoice[] = [];
+    for (const id of s.playerOrder) {
+      const other = s.players[id];
+      if (!other) continue;
+      for (const oloc of other.realm.locations) {
+        for (const a of oloc.alliesPresent) {
+          const def = getCard(a.cardId);
+          if (def?.villain !== 'killmonger') choices.push({ kind: 'card', cardId: a.instanceId });
+        }
+        for (const h of oloc.heroesPresent) choices.push({ kind: 'card', cardId: h.instanceId });
+      }
+    }
+    if (choices.length === 0) {
+      log('Wound — no opposing character to attach to.');
+      return s;
+    }
+    s.pendingPrompt = {
+      id: `prompt-${s.turn}-${s.log.length}`,
+      player: ctx.player,
+      kind: 'chooseCard',
+      message: 'Wound — attach to an opposing character (they lose 2 Strength)',
+      choices: [...choices, { kind: 'skip' }],
+      continuation: {
+        kind: 'deferred',
+        tag: 'attachItem',
+        payload: { itemInstanceId: wound.instanceId },
+      },
+    };
     return s;
   }
   if (key === 'killmonger.hackingRig') {

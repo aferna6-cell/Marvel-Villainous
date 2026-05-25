@@ -239,6 +239,21 @@ export type DeferredTag =
   | 'activateItem' // pick an in-play Item/Specialty to fire its activateEffects[]
   | 'madTitanDefeat' // pick a character to defeat; charge Power equal to their Strength
   | 'crossRealmCharacter' // pick a character in any specified player's realm (payload: ownerId)
+  | 'priceOfLife' // pick a marked opposing Hero; remove the mark, gain Power = Hero Strength
+  | 'soulForASoul' // pick a marked Hero anywhere; remove + then prompt to defeat one of Hela's Heroes
+  | 'defeatHeroAtEvent' // pick an opponent Ally currently at the global Event slot to defeat
+  | 'removeSoulMark' // pick a marked Hero anywhere; remove the mark (no other effect)
+  | 'reviveSouls' // pick a Hero from the Fate discard pile; play to the resolver's player's location
+  | 'attachOdinForce' // pick a Hero anywhere to attach Odin-Force to
+  | 'molecularRearranger' // pick an opposing Ally/Item; remove all copies of that card from their Domain
+  | 'scarletWitchDiscard' // pick a card type; opposing player discards all matching cards from hand
+  | 'tauntPickCharacter' // step 1: pick character to relocate within own Domain; step 2: pick destination location
+  | 'tauntPickLocation' // step 2: destination
+  | 'explosivesDefeat' // pick up to two characters (Str ≤4) at the Explosives location; remove Explosives
+  | 'shadowInitiative' // pick one of your Allies; engine relocates to next opponent + applies +1 token
+  | 'trainerForHire' // pick an opponent; engine reveals from their deck until an Ally + plays free + gain cost+1
+  | 'spiderCloneSummon' // helper used to auto-bring the other clones (no choice)
+  | 'foundByAvengersStep2' // step 2: after picking the Ally, pick a Hero to also remove
   | 'pickAlly'; // pick one of your Allies (handler reads payload.purpose)
 
 // --- Players & game state --------------------------------------------------

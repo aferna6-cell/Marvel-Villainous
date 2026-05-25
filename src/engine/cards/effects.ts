@@ -388,14 +388,33 @@ function resolveDeferred(state: GameState, prompt: Prompt, choice: PromptChoice)
     case 'defeatCharacter':
     case 'discardOwnAlly': {
       if (choice.kind !== 'card') break;
-      const found = findInstance(p, choice.cardId);
+      // Search every player's realm — many cross-realm effects feed this
+      // resolver (Found by the Avengers step 2, etc.).
+      let found: { card: InPlayCard; loc: number; ownerId: PlayerId; zone: 'ally' | 'hero' | 'item' | 'condition' } | null = null;
+      for (const id of s.playerOrder) {
+        const other = s.players[id];
+        if (!other) continue;
+        const f = findInstance(other, choice.cardId);
+        if (f) { found = { card: f.card, loc: f.loc, ownerId: id, zone: f.zone }; break; }
+      }
       if (!found) {
         log(`could not find instance "${choice.cardId}" to defeat`);
         break;
       }
-      removeInstance(p, choice.cardId);
-      log(`defeated ${found.card.cardId} at location ${found.loc + 1}`);
-      // If Gamora was the source and the defeated card is a Thanos ally, +2 strength tokens.
+      const owner = s.players[found.ownerId];
+      if (!owner) break;
+      // Heroes go to the shared Fate discard; allies go to owner's discard.
+      if (found.zone === 'hero') {
+        const loc = owner.realm.locations[found.loc];
+        if (loc) {
+          loc.heroesPresent = loc.heroesPresent.filter((h) => h.instanceId !== choice.cardId);
+          s.fateDiscard.push(found.card.cardId);
+        }
+      } else {
+        removeInstance(owner, choice.cardId);
+      }
+      log(`defeated ${found.card.cardId} at location ${found.loc + 1} (${found.ownerId})`);
+      // Gamora boost: if the defeated card is a Thanos ally, place +2 tokens on Gamora.
       if (payload['gamoraBoost'] === true) {
         const def = getCard(found.card.cardId);
         if (def?.villain === 'thanos') {
@@ -689,6 +708,22 @@ function resolveDeferred(state: GameState, prompt: Prompt, choice: PromptChoice)
           log(`removed ${found.card.cardId} from ${found.ownerId}'s Domain`);
           break;
         }
+        case 'relocateItem': {
+          if (found.zone !== 'item') break;
+          const dstLocStr = payload['toLocation'];
+          const dstOwnerStr = payload['toOwner'];
+          if (typeof dstLocStr === 'number' && typeof dstOwnerStr === 'string') {
+            const dstOwner = s.players[dstOwnerStr as PlayerId];
+            if (!dstOwner) break;
+            const srcLoc = target.realm.locations[found.loc];
+            if (!srcLoc) break;
+            srcLoc.itemsPresent = srcLoc.itemsPresent.filter((it) => it.instanceId !== found!.card.instanceId);
+            const dstLoc = dstOwner.realm.locations[dstLocStr];
+            if (dstLoc) dstLoc.itemsPresent.push(found.card);
+            log(`relocated Item ${found.card.cardId} → ${dstOwnerStr} loc ${dstLocStr + 1}`);
+          }
+          break;
+        }
         case 'relocateHero': {
           if (found.zone !== 'hero') break;
           const dstLocStr = payload['toLocation'];
@@ -710,6 +745,422 @@ function resolveDeferred(state: GameState, prompt: Prompt, choice: PromptChoice)
         default:
           log(`crossRealmCharacter: purpose "${purpose}" not implemented`);
       }
+      break;
+    }
+    case 'priceOfLife': {
+      if (choice.kind !== 'card') break;
+      let found: { card: InPlayCard; ownerId: PlayerId } | null = null;
+      for (const id of s.playerOrder) {
+        const other = s.players[id];
+        if (!other) continue;
+        const f = findInstance(other, choice.cardId);
+        if (f && f.zone === 'hero') { found = { card: f.card, ownerId: id }; break; }
+      }
+      if (!found) break;
+      if (!found.card.soulMark) break;
+      found.card.soulMark = false;
+      delete found.card.tokens['mark'];
+      const def = getCard(found.card.cardId);
+      const gain = (def?.strength ?? 0) + (found.card.strengthModifier ?? 0);
+      p.power += gain;
+      log(`Price of Life — removed mark from ${found.card.cardId}, gained ${gain} Power`);
+      break;
+    }
+    case 'soulForASoul': {
+      if (choice.kind !== 'card') break;
+      // Step 1: remove the marked hero from wherever they are.
+      let removed: { card: InPlayCard; ownerId: PlayerId; loc: number } | null = null;
+      for (const id of s.playerOrder) {
+        const other = s.players[id];
+        if (!other) continue;
+        const f = findInstance(other, choice.cardId);
+        if (f && f.zone === 'hero') { removed = { card: f.card, ownerId: id, loc: f.loc }; break; }
+      }
+      if (!removed) break;
+      const ownerObj = s.players[removed.ownerId];
+      if (!ownerObj) break;
+      const srcLoc = ownerObj.realm.locations[removed.loc];
+      if (!srcLoc) break;
+      srcLoc.heroesPresent = srcLoc.heroesPresent.filter((h) => h.instanceId !== removed!.card.instanceId);
+      s.fateDiscard.push(removed.card.cardId);
+      log(`Soul for a Soul — removed marked ${removed.card.cardId} from ${removed.ownerId}'s Domain`);
+      // Step 2: park a prompt for the player to defeat a Hero in Hela's
+      // Domain (any Hero — marked or not).
+      const heroChoices: PromptChoice[] = [];
+      for (const loc of p.realm.locations) {
+        for (const h of loc.heroesPresent) {
+          heroChoices.push({ kind: 'card', cardId: h.instanceId });
+        }
+      }
+      if (heroChoices.length === 0) {
+        log('Soul for a Soul — no Hero in your Domain to defeat.');
+        break;
+      }
+      s.pendingPrompt = {
+        id: `prompt-${s.turn}-${s.log.length}`,
+        player: prompt.player,
+        kind: 'chooseCard',
+        message: 'Soul for a Soul — defeat a Hero in your Domain',
+        choices: [...heroChoices, { kind: 'skip' }],
+        continuation: { kind: 'deferred', tag: 'defeatCharacter' },
+      };
+      break;
+    }
+    case 'tauntPickCharacter': {
+      if (choice.kind !== 'card') break;
+      const f = findInstance(p, choice.cardId);
+      if (!f) break;
+      // Park step 2: pick destination location in own Domain (any except current).
+      const locChoices: PromptChoice[] = [];
+      for (let i = 0; i < p.realm.locations.length; i++) {
+        if (i !== f.loc) locChoices.push({ kind: 'location', location: i as 0 | 1 | 2 | 3 });
+      }
+      s.pendingPrompt = {
+        id: `prompt-${s.turn}-${s.log.length}`,
+        player: prompt.player,
+        kind: 'chooseLocation',
+        message: `Taunt — relocate ${f.card.cardId} to which of your locations?`,
+        choices: locChoices,
+        continuation: {
+          kind: 'deferred',
+          tag: 'tauntPickLocation',
+          payload: { instanceId: choice.cardId, fromLoc: f.loc, zone: f.zone },
+        },
+      };
+      break;
+    }
+    case 'tauntPickLocation': {
+      if (choice.kind !== 'location') break;
+      const instanceId = String(payload['instanceId'] ?? '');
+      const fromLoc = Number(payload['fromLoc'] ?? -1);
+      const zone = String(payload['zone'] ?? '');
+      if (!instanceId || fromLoc < 0) break;
+      const src = p.realm.locations[fromLoc];
+      const dst = p.realm.locations[choice.location];
+      if (!src || !dst) break;
+      if (zone === 'ally') {
+        const moved = src.alliesPresent.find((a) => a.instanceId === instanceId);
+        if (!moved) break;
+        src.alliesPresent = src.alliesPresent.filter((a) => a.instanceId !== instanceId);
+        dst.alliesPresent.push(moved);
+      } else if (zone === 'hero') {
+        const moved = src.heroesPresent.find((a) => a.instanceId === instanceId);
+        if (!moved) break;
+        src.heroesPresent = src.heroesPresent.filter((a) => a.instanceId !== instanceId);
+        dst.heroesPresent.push(moved);
+      }
+      log(`Taunt — relocated ${instanceId} from loc ${fromLoc + 1} to loc ${choice.location + 1}`);
+      break;
+    }
+    case 'explosivesDefeat': {
+      if (choice.kind !== 'card') break;
+      const explodingId = String(payload['explosivesInstance'] ?? '');
+      const alreadyDefeated = new Set<string>((payload['alreadyDefeated'] as string[]) ?? []);
+      // Find and defeat the target.
+      let foundOwner: PlayerId | null = null;
+      let foundLoc = -1;
+      for (const id of s.playerOrder) {
+        const other = s.players[id];
+        if (!other) continue;
+        const f = findInstance(other, choice.cardId);
+        if (f && (f.zone === 'ally' || f.zone === 'hero')) {
+          foundOwner = id;
+          foundLoc = f.loc;
+          // Strength gate: ≤4.
+          const def = getCard(f.card.cardId);
+          if ((def?.strength ?? 99) > 4) {
+            log(`Explosives — ${f.card.cardId} too strong (Str ${def?.strength ?? '?'}).`);
+            return s;
+          }
+          break;
+        }
+      }
+      if (!foundOwner) break;
+      const owner = s.players[foundOwner];
+      if (!owner) break;
+      if (foundLoc >= 0) {
+        const loc = owner.realm.locations[foundLoc];
+        if (loc) {
+          const hero = loc.heroesPresent.find((h) => h.instanceId === choice.cardId);
+          if (hero) {
+            loc.heroesPresent = loc.heroesPresent.filter((h) => h.instanceId !== choice.cardId);
+            s.fateDiscard.push(hero.cardId);
+          } else {
+            removeInstance(owner, choice.cardId);
+          }
+        }
+      }
+      alreadyDefeated.add(choice.cardId);
+      log(`Explosives — defeated ${choice.cardId} (${alreadyDefeated.size}/2)`);
+
+      // Re-park for a second target if available and not already at 2.
+      if (alreadyDefeated.size < 2) {
+        const locOf = p.realm.locations.find((loc) => loc.itemsPresent.some((it) => it.instanceId === explodingId));
+        if (locOf) {
+          const moreChoices: PromptChoice[] = [];
+          for (const id of s.playerOrder) {
+            const other = s.players[id];
+            if (!other) continue;
+            for (const opLoc of other.realm.locations) {
+              const sameLocation = opLoc === locOf;
+              if (!sameLocation) continue;
+              for (const c of [...opLoc.alliesPresent, ...opLoc.heroesPresent]) {
+                if (alreadyDefeated.has(c.instanceId)) continue;
+                const def = getCard(c.cardId);
+                if ((def?.strength ?? 99) <= 4) moreChoices.push({ kind: 'card', cardId: c.instanceId });
+              }
+            }
+          }
+          if (moreChoices.length > 0) {
+            s.pendingPrompt = {
+              id: `prompt-${s.turn}-${s.log.length}`,
+              player: prompt.player,
+              kind: 'chooseCard',
+              message: 'Explosives — pick a second character (Str ≤4) at this location, or Skip',
+              choices: [...moreChoices, { kind: 'skip' }],
+              continuation: {
+                kind: 'deferred',
+                tag: 'explosivesDefeat',
+                payload: { explosivesInstance: explodingId, alreadyDefeated: Array.from(alreadyDefeated) },
+              },
+            };
+            return s;
+          }
+        }
+      }
+      // After resolution, remove the Explosives item itself.
+      if (explodingId) removeInstance(p, explodingId);
+      break;
+    }
+    case 'shadowInitiative': {
+      if (choice.kind !== 'card') break;
+      const f = findInstance(p, choice.cardId);
+      if (!f || f.zone !== 'ally') break;
+      // Pick the next opponent in seat order.
+      const opps = s.playerOrder.filter((id) => id !== prompt.player);
+      const dstId = opps[s.turn % opps.length] ?? opps[0];
+      if (!dstId) break;
+      const dst = s.players[dstId];
+      if (!dst) break;
+      const srcLoc = p.realm.locations[f.loc];
+      if (!srcLoc) break;
+      srcLoc.alliesPresent = srcLoc.alliesPresent.filter((a) => a.instanceId !== choice.cardId);
+      const dstLoc = dst.realm.locations[dst.realm.villainTokenAt];
+      if (dstLoc) dstLoc.alliesPresent.push(f.card);
+      f.card.strengthModifier += 1;
+      f.card.tokens['strength'] = (f.card.tokens['strength'] ?? 0) + 1;
+      log(`Shadow Initiative — sent ${f.card.cardId} to ${dstId}'s Domain with +1 Strength token`);
+      break;
+    }
+    case 'trainerForHire': {
+      if (choice.kind !== 'target' || choice.target.kind !== 'player') break;
+      const opp = s.players[choice.target.player];
+      if (!opp) break;
+      // Reveal from their deck until an Ally appears.
+      const revealed: string[] = [];
+      let found: string | null = null;
+      while (opp.deck.length > 0) {
+        const top = opp.deck.shift();
+        if (!top) break;
+        const def = getCard(top);
+        if (def?.type === 'ally') { found = top; break; }
+        revealed.push(top);
+      }
+      for (const c of revealed) opp.discard.push(c);
+      if (found) {
+        const def = getCard(found);
+        const dstLoc = opp.realm.locations[opp.realm.villainTokenAt];
+        if (dstLoc) {
+          dstLoc.alliesPresent.push({
+            instanceId: `inst-${++s.instanceCounter}`,
+            cardId: found,
+            strengthModifier: 0,
+            tokens: {},
+          });
+        }
+        const bounty = (def?.cost ?? 0) + 1;
+        p.power += bounty;
+        log(`Trainer for Hire — revealed ${revealed.length} non-Ally(s); played "${found}" to ${choice.target.player} and gained ${bounty} Power.`);
+      } else {
+        log(`Trainer for Hire — no Ally in ${choice.target.player}'s deck (${revealed.length} discarded).`);
+      }
+      break;
+    }
+    case 'spiderCloneSummon': {
+      // No choice needed; the handler ran on play and called this to mass-summon.
+      break;
+    }
+    case 'foundByAvengersStep2': {
+      // First step: remove the picked Ally.
+      if (choice.kind !== 'card') break;
+      const allyFound = findInstance(p, choice.cardId);
+      if (allyFound && allyFound.zone === 'ally') {
+        removeInstance(p, choice.cardId);
+        log(`Found by the Avengers — removed Ally ${allyFound.card.cardId}`);
+      }
+      // Step 2: park a prompt asking which Hero (in any Domain) to also remove.
+      const heroChoices: PromptChoice[] = [];
+      for (const id of s.playerOrder) {
+        const other = s.players[id];
+        if (!other) continue;
+        for (const loc of other.realm.locations) {
+          for (const h of loc.heroesPresent) {
+            heroChoices.push({ kind: 'card', cardId: h.instanceId });
+          }
+        }
+      }
+      if (heroChoices.length === 0) {
+        log('Found by the Avengers — no Hero in any Domain to remove (step 2).');
+        break;
+      }
+      s.pendingPrompt = {
+        id: `prompt-${s.turn}-${s.log.length}`,
+        player: prompt.player,
+        kind: 'chooseCard',
+        message: 'Found by the Avengers — pick a Hero to also remove (step 2)',
+        choices: [...heroChoices, { kind: 'skip' }],
+        continuation: { kind: 'deferred', tag: 'defeatCharacter' },
+      };
+      break;
+    }
+    case 'removeSoulMark': {
+      if (choice.kind !== 'card') break;
+      for (const id of s.playerOrder) {
+        const other = s.players[id];
+        if (!other) continue;
+        const f = findInstance(other, choice.cardId);
+        if (f && f.zone === 'hero' && f.card.soulMark) {
+          f.card.soulMark = false;
+          delete f.card.tokens['mark'];
+          log(`removed Soul Mark from ${f.card.cardId}`);
+          break;
+        }
+      }
+      break;
+    }
+    case 'reviveSouls': {
+      if (choice.kind !== 'card') break;
+      const idx = s.fateDiscard.indexOf(choice.cardId);
+      if (idx === -1) break;
+      s.fateDiscard.splice(idx, 1);
+      const dest = p.realm.locations[p.realm.villainTokenAt];
+      if (!dest) break;
+      dest.heroesPresent.push({
+        instanceId: `inst-${++s.instanceCounter}`,
+        cardId: choice.cardId,
+        strengthModifier: 0,
+        tokens: {},
+      });
+      log(`Revive Souls — ${choice.cardId} placed in ${prompt.player}'s Domain`);
+      break;
+    }
+    case 'attachOdinForce': {
+      if (choice.kind !== 'card') break;
+      let found: { card: InPlayCard; ownerId: PlayerId; loc: number } | null = null;
+      for (const id of s.playerOrder) {
+        const other = s.players[id];
+        if (!other) continue;
+        const f = findInstance(other, choice.cardId);
+        if (f && f.zone === 'hero') { found = { card: f.card, ownerId: id, loc: f.loc }; break; }
+      }
+      if (!found) break;
+      if (found.card.soulMark) {
+        found.card.soulMark = false;
+        delete found.card.tokens['mark'];
+      }
+      found.card.tokens['protector'] = 1;
+      // Place the Odin-Force item attached to the hero, at the same location.
+      const owner = s.players[found.ownerId];
+      if (!owner) break;
+      const loc = owner.realm.locations[found.loc];
+      if (loc) {
+        loc.itemsPresent.push({
+          instanceId: `inst-${++s.instanceCounter}`,
+          cardId: 'fate-hela-odin-force',
+          strengthModifier: 0,
+          tokens: {},
+          attachedTo: choice.cardId,
+        });
+      }
+      log(`Odin-Force attached to ${found.card.cardId} (PROTECTOR, no-mark)`);
+      break;
+    }
+    case 'molecularRearranger': {
+      if (choice.kind !== 'card') break;
+      let target: { ownerId: PlayerId; cardId: string } | null = null;
+      for (const id of s.playerOrder) {
+        const other = s.players[id];
+        if (!other) continue;
+        const f = findInstance(other, choice.cardId);
+        if (f && (f.zone === 'ally' || f.zone === 'item')) {
+          target = { ownerId: id, cardId: f.card.cardId };
+          break;
+        }
+      }
+      if (!target) break;
+      const owner = s.players[target.ownerId];
+      if (!owner) break;
+      let removed = 0;
+      for (const loc of owner.realm.locations) {
+        const allyKeep: InPlayCard[] = [];
+        for (const a of loc.alliesPresent) {
+          if (a.cardId === target.cardId) {
+            owner.discard.push(a.cardId);
+            removed++;
+          } else allyKeep.push(a);
+        }
+        loc.alliesPresent = allyKeep;
+        const itemKeep: InPlayCard[] = [];
+        for (const it of loc.itemsPresent) {
+          if (it.cardId === target.cardId) {
+            owner.discard.push(it.cardId);
+            removed++;
+          } else itemKeep.push(it);
+        }
+        loc.itemsPresent = itemKeep;
+      }
+      log(`Molecular Rearranger — removed ${removed} copies of ${target.cardId} from ${target.ownerId}'s Domain`);
+      break;
+    }
+    case 'scarletWitchDiscard': {
+      // The PromptChoice for type is encoded as {kind:'card', cardId: 'type:ally'}
+      // (a synthetic; resolver inspects the cardId string).
+      if (choice.kind !== 'card') break;
+      const typeStr = choice.cardId.replace(/^type:/, '');
+      const opp = s.players[payload['opponentId'] as PlayerId];
+      if (!opp) break;
+      const keep: string[] = [];
+      let removed = 0;
+      for (const cardId of opp.hand) {
+        const def = getCard(cardId);
+        if (def?.type === typeStr) {
+          opp.discard.push(cardId);
+          removed++;
+        } else keep.push(cardId);
+      }
+      opp.hand = keep;
+      log(`Scarlet Witch — ${opp.id} discarded ${removed} card(s) of type "${typeStr}"`);
+      break;
+    }
+    case 'defeatHeroAtEvent': {
+      if (choice.kind !== 'card') break;
+      // For each player, find an ally at the global Event slot. The game
+      // model puts Allies attached to the Event in `state.globalEvent`
+      // somewhere — but the existing engine doesn't really model an "Event
+      // location" slot per-player. Simplification: defeat the chosen ally
+      // wherever it is.
+      let target: { ownerId: PlayerId } | null = null;
+      for (const id of s.playerOrder) {
+        const other = s.players[id];
+        if (!other) continue;
+        const f = findInstance(other, choice.cardId);
+        if (f && f.zone === 'ally') { target = { ownerId: id }; break; }
+      }
+      if (!target) break;
+      const targetPlayer = s.players[target.ownerId];
+      if (!targetPlayer) break;
+      removeInstance(targetPlayer, choice.cardId);
+      log(`Hawkeye — defeated ${target.ownerId}'s Ally ${choice.cardId} at the Event`);
       break;
     }
     case 'activateItem': {

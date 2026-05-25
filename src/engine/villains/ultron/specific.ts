@@ -89,7 +89,30 @@ export function applyVillainSpecific(
     return s;
   }
   if (key === 'ultron.jocasta.heroSwap') {
-    log('Jocasta — when played, you may relocate any Hero to any location in any Domain.');
+    const heroes: PromptChoice[] = [];
+    for (const id of s.playerOrder) {
+      const other = s.players[id];
+      if (!other) continue;
+      for (const loc of other.realm.locations) {
+        for (const h of loc.heroesPresent) heroes.push({ kind: 'card', cardId: h.instanceId });
+      }
+    }
+    if (heroes.length === 0) {
+      log('Jocasta — no Hero in any Domain to relocate.');
+      return s;
+    }
+    s.pendingPrompt = {
+      id: `prompt-${s.turn}-${s.log.length}`,
+      player: ctx.player,
+      kind: 'chooseCard',
+      message: "Jocasta — relocate any Hero to Ultron's current location",
+      choices: [...heroes, { kind: 'skip' }],
+      continuation: {
+        kind: 'deferred',
+        tag: 'crossRealmCharacter',
+        payload: { purpose: 'relocateHero', toOwner: ctx.player, toLocation: p.realm.villainTokenAt },
+      },
+    };
     return s;
   }
 
@@ -108,7 +131,10 @@ export function applyVillainSpecific(
     return s;
   }
   if (key === 'ultron.assimilateKnowledge') {
-    log('Assimilate Knowledge — look at the top 6 cards of the Fate deck, put them back in any order.');
+    // Engine simplification: log the top 6 Fate-deck cards so the player can
+    // see them, then leave them in place (rearrange not modelled).
+    const peek = s.fateDeck.slice(0, 6);
+    log(`Assimilate Knowledge — top of Fate deck: ${peek.join(', ') || '(empty)'}`);
     return s;
   }
   if (key === 'ultron.encephaloRay') {
@@ -149,7 +175,22 @@ export function applyVillainSpecific(
     return s;
   }
   if (key === 'ultron.technoforming') {
-    log('Technoforming — place a +1 Strength token on an Ally you control; you may relocate that Ally to an Event.');
+    const allies: PromptChoice[] = [];
+    for (const loc of p.realm.locations) {
+      for (const a of loc.alliesPresent) allies.push({ kind: 'card', cardId: a.instanceId });
+    }
+    if (allies.length === 0) {
+      log('Technoforming — no Allies to boost.');
+      return s;
+    }
+    s.pendingPrompt = {
+      id: `prompt-${s.turn}-${s.log.length}`,
+      player: ctx.player,
+      kind: 'chooseCard',
+      message: 'Technoforming — place a +1 Strength token on an Ally',
+      choices: [...allies, { kind: 'skip' }],
+      continuation: { kind: 'deferred', tag: 'boostAlly', payload: { n: 1 } },
+    };
     return s;
   }
 
@@ -198,11 +239,49 @@ export function applyVillainSpecific(
     return s;
   }
   if (key === 'ultron.fate.scarletWitch') {
-    log('Scarlet Witch — choose a card type; the targeted player reveals their hand and discards all cards of that type.');
+    // Choose a card type to force a discard. Engine simplification: park a
+    // prompt offering the four primary types as synthetic `card` choices.
+    s.pendingPrompt = {
+      id: `prompt-${s.turn}-${s.log.length}`,
+      player: ctx.player,
+      kind: 'chooseCard',
+      message: "Scarlet Witch — choose a card type; targeted player discards all matching cards from hand",
+      choices: [
+        { kind: 'card', cardId: 'type:ally' },
+        { kind: 'card', cardId: 'type:item' },
+        { kind: 'card', cardId: 'type:effect' },
+        { kind: 'card', cardId: 'type:specialty' },
+        { kind: 'skip' },
+      ],
+      continuation: { kind: 'deferred', tag: 'scarletWitchDiscard', payload: { opponentId: ctx.player } },
+    };
     return s;
   }
   if (key === 'ultron.fate.wasp') {
-    log("Wasp — you may relocate any Hero from the targeted player's Domain to a new location in any player's Domain.");
+    const heroes: PromptChoice[] = [];
+    for (const id of s.playerOrder) {
+      const other = s.players[id];
+      if (!other) continue;
+      for (const loc of other.realm.locations) {
+        for (const h of loc.heroesPresent) heroes.push({ kind: 'card', cardId: h.instanceId });
+      }
+    }
+    if (heroes.length === 0) {
+      log('Wasp — no Hero to relocate.');
+      return s;
+    }
+    s.pendingPrompt = {
+      id: `prompt-${s.turn}-${s.log.length}`,
+      player: ctx.player,
+      kind: 'chooseCard',
+      message: "Wasp — relocate any Hero to Ultron's current location",
+      choices: [...heroes, { kind: 'skip' }],
+      continuation: {
+        kind: 'deferred',
+        tag: 'crossRealmCharacter',
+        payload: { purpose: 'relocateHero', toOwner: ctx.player, toLocation: p.realm.villainTokenAt },
+      },
+    };
     return s;
   }
   if (key === 'ultron.fate.wonderMan') {
@@ -210,7 +289,28 @@ export function applyVillainSpecific(
     return s;
   }
   if (key === 'ultron.fate.molecularRearranger') {
-    log("Molecular Rearranger — choose an Item or Ally in the targeted player's Domain; they must remove all copies of that card from their Domain.");
+    const choices: PromptChoice[] = [];
+    for (const id of s.playerOrder) {
+      if (id === ctx.player) continue;
+      const other = s.players[id];
+      if (!other) continue;
+      for (const loc of other.realm.locations) {
+        for (const a of loc.alliesPresent) choices.push({ kind: 'card', cardId: a.instanceId });
+        for (const it of loc.itemsPresent) choices.push({ kind: 'card', cardId: it.instanceId });
+      }
+    }
+    if (choices.length === 0) {
+      log('Molecular Rearranger — no Ally/Item in any opposing Domain.');
+      return s;
+    }
+    s.pendingPrompt = {
+      id: `prompt-${s.turn}-${s.log.length}`,
+      player: ctx.player,
+      kind: 'chooseCard',
+      message: "Molecular Rearranger — pick an Item or Ally; opponent removes ALL copies of it",
+      choices: [...choices, { kind: 'skip' }],
+      continuation: { kind: 'deferred', tag: 'molecularRearranger' },
+    };
     return s;
   }
   if (key === 'ultron.fate.deactivationSwitch') {

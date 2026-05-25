@@ -164,15 +164,66 @@ export function applyVillainSpecific(
     return s;
   }
   if (key === 'taskmaster.redeploy') {
-    log('Redeploy — relocate up to three Allies you control (use Relocate action ×3).');
+    // Park the first of three relocate prompts.
+    const allies: PromptChoice[] = [];
+    for (const loc of p.realm.locations) {
+      for (const a of loc.alliesPresent) allies.push({ kind: 'card', cardId: a.instanceId });
+    }
+    if (allies.length === 0) {
+      log('Redeploy — no Allies to relocate.');
+      return s;
+    }
+    s.pendingPrompt = {
+      id: `prompt-${s.turn}-${s.log.length}`,
+      player: ctx.player,
+      kind: 'chooseCard',
+      message: 'Redeploy — pick an Ally to relocate (1 of up to 3)',
+      choices: [...allies, { kind: 'skip' }],
+      continuation: { kind: 'deferred', tag: 'tauntPickCharacter', payload: { remaining: 3 } },
+    };
     return s;
   }
   if (key === 'taskmaster.shadowInitiative') {
-    log("Shadow Initiative — relocate an Ally you control to another player's Domain; place a +1 Strength token on that Ally.");
+    // Pick one of your Allies; the player resolves destination + token via
+    // the relocateHero/Ally + boost pattern. Simpler: prompt picks the Ally;
+    // resolver auto-relocates to next opponent's location and applies +1.
+    const allies: PromptChoice[] = [];
+    for (const loc of p.realm.locations) {
+      for (const a of loc.alliesPresent) allies.push({ kind: 'card', cardId: a.instanceId });
+    }
+    if (allies.length === 0) {
+      log('Shadow Initiative — no Allies to send.');
+      return s;
+    }
+    s.pendingPrompt = {
+      id: `prompt-${s.turn}-${s.log.length}`,
+      player: ctx.player,
+      kind: 'chooseCard',
+      message: "Shadow Initiative — send an Ally to another player's Domain (+1 Str token)",
+      choices: [...allies, { kind: 'skip' }],
+      continuation: { kind: 'deferred', tag: 'shadowInitiative' },
+    };
     return s;
   }
   if (key === 'taskmaster.trainerForHire') {
-    log("Trainer for Hire — choose another player; reveal cards from their Villain deck until you reveal an Ally; play it free in their Domain; gain Power = its cost +1.");
+    // Choose an opponent, reveal from their Villain deck until an Ally
+    // appears, play that Ally to their Domain at their villain's location,
+    // gain Power = its cost + 1.
+    const opps = s.playerOrder.filter((id) => id !== ctx.player);
+    if (opps.length === 0) {
+      log('Trainer for Hire — no opponents.');
+      return s;
+    }
+    s.pendingPrompt = {
+      id: `prompt-${s.turn}-${s.log.length}`,
+      player: ctx.player,
+      kind: 'chooseTarget',
+      message: "Trainer for Hire — pick an opponent (you reveal their deck until an Ally appears)",
+      choices: opps.map(
+        (player): PromptChoice => ({ kind: 'target', target: { kind: 'player', player } }),
+      ),
+      continuation: { kind: 'deferred', tag: 'trainerForHire' },
+    };
     return s;
   }
 
@@ -268,7 +319,57 @@ export function applyVillainSpecific(
 
   // ----- Fate -------------------------------------------------------------
   if (key === 'taskmaster.fate.spiderClone.summonOthers') {
-    log('Scarlet Spider Clone — find the other two clones and play them to this location.');
+    // Find this clone's location, then pull the other two from Fate deck/discard.
+    let cloneLoc = -1;
+    for (let i = 0; i < p.realm.locations.length; i++) {
+      const loc = p.realm.locations[i];
+      if (!loc) continue;
+      if (loc.heroesPresent.some((h) => h.cardId.startsWith('fate-taskmaster-scarlet-spider-clone'))) {
+        cloneLoc = i;
+        break;
+      }
+    }
+    if (cloneLoc === -1) return s;
+    const dst = p.realm.locations[cloneLoc];
+    if (!dst) return s;
+    const alreadyHere = new Set(
+      dst.heroesPresent
+        .filter((h) => h.cardId.startsWith('fate-taskmaster-scarlet-spider-clone'))
+        .map((h) => h.cardId),
+    );
+    let summoned = 0;
+    const allClones = [
+      'fate-taskmaster-scarlet-spider-clone-1',
+      'fate-taskmaster-scarlet-spider-clone-2',
+      'fate-taskmaster-scarlet-spider-clone-3',
+    ];
+    for (const cid of allClones) {
+      if (alreadyHere.has(cid)) continue;
+      const dIdx = s.fateDeck.indexOf(cid);
+      if (dIdx !== -1) {
+        s.fateDeck.splice(dIdx, 1);
+        dst.heroesPresent.push({
+          instanceId: `inst-${++s.instanceCounter}`,
+          cardId: cid,
+          strengthModifier: 0,
+          tokens: {},
+        });
+        summoned++;
+        continue;
+      }
+      const fdIdx = s.fateDiscard.indexOf(cid);
+      if (fdIdx !== -1) {
+        s.fateDiscard.splice(fdIdx, 1);
+        dst.heroesPresent.push({
+          instanceId: `inst-${++s.instanceCounter}`,
+          cardId: cid,
+          strengthModifier: 0,
+          tokens: {},
+        });
+        summoned++;
+      }
+    }
+    log(`Scarlet Spider Clone — summoned ${summoned} additional clone(s).`);
     return s;
   }
   if (key === 'taskmaster.fate.butterball') {
@@ -303,7 +404,24 @@ export function applyVillainSpecific(
     return s;
   }
   if (key === 'taskmaster.fate.foundByAvengers') {
-    log('Found by the Avengers — choose an Ally of the targeted Villain and any Hero in any Domain; remove both.');
+    // Step 1: pick an Ally of the targeted Villain (ctx.player is the Fated
+    // villain here). Then step 2 picks a Hero to remove as well.
+    const allies: PromptChoice[] = [];
+    for (const loc of p.realm.locations) {
+      for (const a of loc.alliesPresent) allies.push({ kind: 'card', cardId: a.instanceId });
+    }
+    if (allies.length === 0) {
+      log('Found by the Avengers — no Allies in the targeted Domain.');
+      return s;
+    }
+    s.pendingPrompt = {
+      id: `prompt-${s.turn}-${s.log.length}`,
+      player: ctx.player,
+      kind: 'chooseCard',
+      message: 'Found by the Avengers — pick an Ally to remove (step 1)',
+      choices: [...allies, { kind: 'skip' }],
+      continuation: { kind: 'deferred', tag: 'foundByAvengersStep2' },
+    };
     return s;
   }
   if (key === 'taskmaster.fate.governmentWork') {

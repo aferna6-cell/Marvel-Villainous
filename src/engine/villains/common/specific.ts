@@ -29,7 +29,66 @@ export function applyCommonFateSpecific(
     return true;
   }
   if (key === 'fate.common.blackWidow') {
-    log('Black Widow — when played, you may defeat an Ally at her location.');
+    let bwLoc = -1;
+    for (let i = 0; i < p.realm.locations.length; i++) {
+      const loc = p.realm.locations[i];
+      if (!loc) continue;
+      if (loc.heroesPresent.some((h) => h.cardId === 'fate-common-black-widow')) {
+        bwLoc = i;
+        break;
+      }
+    }
+    if (bwLoc === -1) {
+      log('Black Widow — not in play after resolution.');
+      return true;
+    }
+    const loc = p.realm.locations[bwLoc];
+    if (!loc) return true;
+    const allies = loc.alliesPresent;
+    if (allies.length === 0) {
+      log('Black Widow — no Ally at her location.');
+      return true;
+    }
+    s.pendingPrompt = {
+      id: `prompt-${s.turn}-${s.log.length}`,
+      player: ctx.player,
+      kind: 'chooseCard',
+      message: 'Black Widow — defeat an Ally at her location',
+      choices: [
+        ...allies.map((a) => ({ kind: 'card' as const, cardId: a.instanceId })),
+        { kind: 'skip' as const },
+      ],
+      continuation: { kind: 'deferred', tag: 'defeatCharacter' },
+    };
+    return true;
+  }
+  if (key === 'fate.common.hawkeye') {
+    // "Defeat one of the targeted player's Allies at an Event" — engine has
+    // no per-player Event-attached pool, so park a prompt with any of the
+    // active player's Allies whose location holds a card with
+    // `targetedVillain` set (a proxy for Event-attachment), falling back to
+    // all opposing Allies if none are clearly at an Event.
+    const choices: import('../../types').PromptChoice[] = [];
+    for (const id of s.playerOrder) {
+      if (id === ctx.player) continue;
+      const other = s.players[id];
+      if (!other) continue;
+      for (const loc of other.realm.locations) {
+        for (const a of loc.alliesPresent) choices.push({ kind: 'card', cardId: a.instanceId });
+      }
+    }
+    if (choices.length === 0) {
+      log('Hawkeye — no opposing Ally to defeat.');
+      return true;
+    }
+    s.pendingPrompt = {
+      id: `prompt-${s.turn}-${s.log.length}`,
+      player: ctx.player,
+      kind: 'chooseCard',
+      message: "Hawkeye — defeat one of the targeted player's Allies (Event slot)",
+      choices: [...choices, { kind: 'skip' }],
+      continuation: { kind: 'deferred', tag: 'defeatHeroAtEvent' },
+    };
     return true;
   }
   if (key === 'fate.common.nickFury') {

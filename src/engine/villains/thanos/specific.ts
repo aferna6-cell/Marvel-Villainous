@@ -78,7 +78,8 @@ export function applyVillainSpecific(
     return s;
   }
   if (key === 'thanos.corvusGlaive.legionsRide') {
-    log("Corvus Glaive — when relocated to another player's Domain, you may relocate one Legions Ally with him.");
+    p.flags['corvusGlaiveActive'] = true;
+    log("Corvus Glaive — when relocated to another player's Domain, you may relocate one Legions Ally with him (resolve via Relocate action).");
     return s;
   }
   if (key === 'thanos.ebonyMaw.persistOnStoneKill') {
@@ -194,7 +195,18 @@ export function applyVillainSpecific(
     return s;
   }
   if (key === 'thanos.deliverJudgment') {
-    log('Deliver Judgment — choose a location with an Infinity Stone, relocate up to 2 Allies there (Relocate action ×2), and place a +1 Strength token on each of your Allies at that location.');
+    // Simplification: place a +1 Strength token on each of Thanos's Allies
+    // at every location where Thanos has a Stone (engine convention: any
+    // location with stoneAttached flag or for now, all Allies in his realm).
+    let count = 0;
+    for (const loc of p.realm.locations) {
+      for (const a of loc.alliesPresent) {
+        a.tokens['strength'] = (a.tokens['strength'] ?? 0) + 1;
+        a.strengthModifier = (a.strengthModifier ?? 0) + 1;
+        count++;
+      }
+    }
+    log(`Deliver Judgment — placed +1 Strength tokens on ${count} of your Allies; relocate up to 2 manually with the Relocate action.`);
     return s;
   }
   if (key === 'thanos.madTitan') {
