@@ -40,6 +40,7 @@ export function Card({ cardId, draggable = false }: CardProps): JSX.Element {
     >
       <div className="card__cost">{def?.cost ?? '?'}</div>
       <div className="card__name">{displayName}</div>
+      {def?.text ? <div className="card__text">{def.text}</div> : null}
       <div className="card__type">{def?.type ?? '—'}</div>
       {def?.strength !== undefined ? (
         <div className="card__strength">{def.strength}</div>

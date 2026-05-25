@@ -89,15 +89,52 @@ describe('UI playthrough — Thanos solo, multi-action turn', () => {
     expect(turnLabel.textContent).toMatch(/Turn:\s*2/);
   });
 
-  it('renders the multi-realm Board for a 2-player game', () => {
+  it('renders the multi-realm Board for a 2-player game with any two villains', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('link', { name: 'New Game' }));
-    fireEvent.click(screen.getByRole('button', { name: /2-Player · Thanos vs Hela/i }));
+    // The new picker has 2 seats, each with all 5 villain choices. Pick
+    // any two distinct villains (Killmonger + Ultron — verifying the
+    // picker isn't locked to Thanos/Hela).
+    const seatChoices = screen.getAllByRole('button', { name: 'Killmonger' });
+    expect(seatChoices.length).toBeGreaterThanOrEqual(2);
+    fireEvent.click(seatChoices[0]!);
+    const seatChoicesUltron = screen.getAllByRole('button', { name: 'Ultron' });
+    expect(seatChoicesUltron.length).toBeGreaterThanOrEqual(2);
+    // Pick the one for seat 2 — after seat 1 picked Killmonger, the seat-1
+    // Killmonger is button[0], so seat-2 Ultron is the second occurrence.
+    fireEvent.click(seatChoicesUltron[1]!);
+    fireEvent.click(screen.getByRole('button', { name: /Start 2-Player Game/i }));
 
     // 2 players means 8 locations total (4 per realm).
     const locations = screen.getAllByText(/^Location \d$/);
     expect(locations.length).toBe(8);
-    // The pass-device curtain should render once the first player acts.
+  });
+
+  it('disables a villain on other seats once one seat picks it', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('link', { name: 'New Game' }));
+    // Pick Thanos on seat 1.
+    const thanosBtns = screen.getAllByRole('button', { name: 'Thanos' });
+    fireEvent.click(thanosBtns[0]!);
+    // Now seat 2's Thanos button should be disabled.
+    const after = screen.getAllByRole('button', { name: 'Thanos' });
+    expect((after[1] as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('add/remove seat scales the picker from 2 to 4 seats', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('link', { name: 'New Game' }));
+    // Start at 2 seats — there should be 2× 5 = 10 villain buttons in the picker.
+    let allThanos = screen.getAllByRole('button', { name: 'Thanos' });
+    expect(allThanos.length).toBe(2);
+    fireEvent.click(screen.getByRole('button', { name: /\+ Seat/ }));
+    allThanos = screen.getAllByRole('button', { name: 'Thanos' });
+    expect(allThanos.length).toBe(3);
+    fireEvent.click(screen.getByRole('button', { name: /\+ Seat/ }));
+    allThanos = screen.getAllByRole('button', { name: 'Thanos' });
+    expect(allThanos.length).toBe(4);
+    // The + Seat button should now be disabled (max 4 seats).
+    expect((screen.getByRole('button', { name: /\+ Seat/ }) as HTMLButtonElement).disabled).toBe(true);
   });
 
   it('Quit button returns to the main menu', () => {

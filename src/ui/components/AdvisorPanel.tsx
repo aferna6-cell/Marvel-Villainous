@@ -7,7 +7,7 @@
 // the panel; you play manually with the recommended action highlighted
 // via the highlightedAction context).
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useEngine, useGameState } from '../hooks/useGameEngine';
 import {
   suggestTopK,
@@ -31,6 +31,21 @@ export function AdvisorPanel(): JSX.Element | null {
   const [showSequences, setShowSequences] = useState(false);
   const [autoPlaying, setAutoPlaying] = useState(false);
   const cancelAutoPlayRef = useRef(false);
+  const lastSeenPlayer = useRef(state.activePlayer);
+
+  // Clear the panel whenever the active player changes — stale
+  // recommendations and sequences from the previous turn would leak
+  // into the next player's view otherwise.
+  useEffect(() => {
+    if (lastSeenPlayer.current !== state.activePlayer) {
+      lastSeenPlayer.current = state.activePlayer;
+      setRecs([]);
+      setSequences([]);
+      setShowWhy(false);
+      setShowOthers(false);
+      setShowSequences(false);
+    }
+  }, [state.activePlayer]);
 
   // Bail-out if the engine handed us a Won state mid-render.
   if (state.winner !== null) return null;

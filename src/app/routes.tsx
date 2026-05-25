@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import { useEngineCtx } from '../ui/hooks/useGameEngine';
 import { createGameEngine } from '../engine/state';
@@ -28,33 +29,117 @@ function MainMenu(): JSX.Element {
 }
 
 const ALL_VILLAINS = ['thanos', 'hela', 'killmonger', 'taskmaster', 'ultron'] as const;
+type Villain = typeof ALL_VILLAINS[number];
+
+const VILLAIN_LABEL: Record<Villain, string> = {
+  thanos: 'Thanos',
+  hela: 'Hela',
+  killmonger: 'Killmonger',
+  taskmaster: 'Taskmaster',
+  ultron: 'Ultron',
+};
+
+const VILLAIN_GOAL: Record<Villain, string> = {
+  thanos: 'Collect all 6 Infinity Stones.',
+  hela: "Build to 8 Allies + Soul Marks at Odin's Vault.",
+  killmonger: 'Defeat Klaw + Black Panther, plant 2 Explosives.',
+  taskmaster: '4 Allies at 4 different locations, each Strength 5+.',
+  ultron: 'Reveal the Age of Ultron upgrade.',
+};
 
 function VillainPicker(): JSX.Element {
   const { setEngine } = useEngineCtx();
   const navigate = useNavigate();
-  const start = (villains: ('thanos' | 'hela' | 'killmonger' | 'taskmaster' | 'ultron')[]): void => {
-    setEngine(createGameEngine(newGame({ villains: [...villains], seed: 1 })));
+  const [seats, setSeats] = useState<(Villain | null)[]>([null, null]);
+
+  const start = (villains: Villain[]): void => {
+    setEngine(createGameEngine(newGame({ villains: [...villains], seed: Date.now() % 1_000_000 })));
     navigate('/game');
   };
+
+  const pickSeat = (idx: number, v: Villain | null): void => {
+    const next = [...seats];
+    next[idx] = v;
+    setSeats(next);
+  };
+
+  const addSeat = (): void => {
+    if (seats.length < 4) setSeats([...seats, null]);
+  };
+  const removeSeat = (): void => {
+    if (seats.length > 2) setSeats(seats.slice(0, -1));
+  };
+
+  const chosen = seats.filter((s): s is Villain => s !== null);
+  const allFilled = chosen.length === seats.length;
+  const duplicates = chosen.length !== new Set(chosen).size;
+  const canStart = allFilled && !duplicates;
+
   return (
     <main className="screen screen--setup">
-      <h2 className="title title--small">Choose your villain</h2>
-      <p className="hint">Solo (single villain, no Fate):</p>
-      {ALL_VILLAINS.map((v) => (
-        <button key={v} className="button" onClick={() => start([v])}>
-          Solo · {v}
-        </button>
-      ))}
-      <p className="hint">Multi-player (Fate testing):</p>
-      <button className="button button--primary" onClick={() => start(['thanos', 'hela'])}>
-        2-Player · Thanos vs Hela
-      </button>
-      <button className="button" onClick={() => start(['thanos', 'hela', 'killmonger', 'ultron'])}>
-        4-Player · Thanos / Hela / Killmonger / Ultron
-      </button>
-      <p className="hint">
-        Per-card ability behavior is still being wired in — see
-        <code> RULES_QUESTIONS.md</code> for the open items.
+      <h2 className="title title--small">Choose your villains</h2>
+
+      <section className="picker-section">
+        <p className="hint">Solo — try any villain on their own:</p>
+        <div className="picker-row">
+          {ALL_VILLAINS.map((v) => (
+            <button key={v} className="button" onClick={() => start([v])}>
+              Solo · {VILLAIN_LABEL[v]}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="picker-section">
+        <p className="hint">
+          Multi-player — pick a villain for each seat (2–4 players):
+        </p>
+        <div className="picker-seats">
+          {seats.map((sel, idx) => (
+            <div className="picker-seat" key={`seat-${idx}`}>
+              <div className="picker-seat__label">Seat {idx + 1}</div>
+              <div className="picker-seat__choices">
+                {ALL_VILLAINS.map((v) => {
+                  const takenByAnotherSeat = seats.some((s, i) => i !== idx && s === v);
+                  const isMine = sel === v;
+                  return (
+                    <button
+                      key={v}
+                      className={`button button--mini ${isMine ? 'button--primary' : ''}`}
+                      disabled={takenByAnotherSeat && !isMine}
+                      onClick={() => pickSeat(idx, isMine ? null : v)}
+                      title={VILLAIN_GOAL[v]}
+                    >
+                      {VILLAIN_LABEL[v]}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="picker-controls">
+          <button className="button button--mini" onClick={removeSeat} disabled={seats.length <= 2}>
+            − Seat
+          </button>
+          <button className="button button--mini" onClick={addSeat} disabled={seats.length >= 4}>
+            + Seat
+          </button>
+          <button
+            className="button button--primary"
+            onClick={() => start(chosen)}
+            disabled={!canStart}
+          >
+            Start {seats.length}-Player Game
+          </button>
+        </div>
+        {duplicates ? (
+          <p className="picker-warning">Each seat must be a different villain.</p>
+        ) : null}
+      </section>
+
+      <p className="hint" style={{ marginTop: '1rem' }}>
+        Hover any villain button to see their printed objective.
       </p>
       <Link className="button" to="/">
         Back
