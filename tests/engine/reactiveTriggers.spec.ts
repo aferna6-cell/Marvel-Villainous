@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { reduce } from '../../src/engine/state';
 import { defeatHero as _defeatHero } from '../../src/engine/actions/defeat';
 import { clearRegistry, registerCards } from '../../src/engine/cards/registry';
-import { makeCard, makeGame } from './fixtures';
+import { makeCard, makeGame, makePlayer } from './fixtures';
 import type { InPlayCard } from '../../src/engine/types';
 
 afterEach(() => clearRegistry());
@@ -24,32 +24,18 @@ describe('Fenris Wolf — autofires when a Hero arrives in Hela\'s Domain', () =
       phase: 'actions',
       playerOrder: ['p1', 'p2'],
       players: {
-        p1: { id: 'p1', villain: 'thanos', power: 5, hand: [], deck: [], discard: [],
-              realm: { id: 't', name: 'T', locations: [
-                { name: 'L1', topIcons: [], bottomIcons: [], alliesPresent: [], heroesPresent: [], itemsPresent: [], conditions: [] },
-                { name: 'L2', topIcons: [], bottomIcons: [], alliesPresent: [], heroesPresent: [], itemsPresent: [], conditions: [] },
-                { name: 'L3', topIcons: [], bottomIcons: [], alliesPresent: [], heroesPresent: [], itemsPresent: [], conditions: [] },
-                { name: 'L4', topIcons: [], bottomIcons: [], alliesPresent: [], heroesPresent: [], itemsPresent: [], conditions: [] },
-              ], villainTokenAt: 0 }, flags: {}, mustMoveDifferent: false,
-              objectiveProgress: { steps: {} }, handSize: 4 },
-        p2: { id: 'p2', villain: 'hela', power: 5, hand: ['hela-fenris-wolf'], deck: [], discard: [],
-              realm: { id: 'h', name: 'H', locations: [
-                { name: 'L1', topIcons: [], bottomIcons: [], alliesPresent: [], heroesPresent: [], itemsPresent: [], conditions: [] },
-                { name: 'L2', topIcons: [], bottomIcons: [], alliesPresent: [], heroesPresent: [], itemsPresent: [], conditions: [] },
-                { name: 'L3', topIcons: [], bottomIcons: [], alliesPresent: [], heroesPresent: [], itemsPresent: [], conditions: [] },
-                { name: 'L4', topIcons: [], bottomIcons: [], alliesPresent: [], heroesPresent: [], itemsPresent: [], conditions: [] },
-              ], villainTokenAt: 0 }, flags: {}, mustMoveDifferent: false,
-              objectiveProgress: { steps: {} }, handSize: 4 },
+        p1: makePlayer('p1', 'thanos'),
+        p2: makePlayer('p2', 'hela', { hand: ['hela-fenris-wolf'] }),
+        p3: makePlayer('p3', 'ultron'),
+        p4: makePlayer('p4', 'killmonger'),
       },
       activePlayer: 'p1',
     });
-    // Simulate a Fate-place by pushing a heroArrived trigger and draining.
     game.pendingTriggers.push({
       event: 'heroArrived',
       player: 'p2',
       payload: { cardId: 'fate-common-iron-man', location: 1, instanceId: 'inst-h' },
     });
-    // We need a fresh reduce to drain the triggers; use a no-op-ish setObjectiveCount.
     const next = reduce(game, { kind: 'setObjectiveCount', player: 'p2', key: 'noop', delta: 0 });
     expect(next.pendingPrompt).not.toBeNull();
     expect(next.pendingPrompt!.player).toBe('p2');
@@ -60,9 +46,11 @@ describe('Fenris Wolf — autofires when a Hero arrives in Hela\'s Domain', () =
     registerCards([
       makeCard({ id: 'hela-fenris-wolf', type: 'ally', strength: 3, cost: 2 }),
     ]);
-    const game = makeGame({ phase: 'actions', playerOrder: ['p1'] });
-    game.players.p1.villain = 'hela';
-    game.players.p1.hand = ['hela-fenris-wolf'];
+    const game = makeGame({
+      phase: 'actions',
+      playerOrder: ['p1'],
+      players: { p1: makePlayer('p1', 'hela', { hand: ['hela-fenris-wolf'] }) } as never,
+    });
     game.pendingPrompt = {
       id: 'p',
       player: 'p1',

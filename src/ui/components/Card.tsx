@@ -27,16 +27,19 @@ export function Card({ cardId, draggable = false }: CardProps): JSX.Element {
     e.dataTransfer.effectAllowed = 'move';
   };
 
+  const displayName = def?.name && def.name.length > 0 ? def.name : cardId;
+  const tooltip = def?.text ? `${displayName} — ${def.text}` : displayName;
+
   return (
     <div
       className="card"
       draggable={draggable}
       onDragStart={draggable ? onDragStart : undefined}
       style={{ background: color }}
-      title={cardId}
+      title={tooltip}
     >
       <div className="card__cost">{def?.cost ?? '?'}</div>
-      <div className="card__id">{cardId}</div>
+      <div className="card__name">{displayName}</div>
       <div className="card__type">{def?.type ?? '—'}</div>
       {def?.strength !== undefined ? (
         <div className="card__strength">{def.strength}</div>

@@ -15,13 +15,17 @@ export function describeAction(a: Action): string {
     case 'useIcon': return `Spend the icon at slot ${a.iconIndex + 1} of your current location.`;
     case 'playCard': {
       const def = getCard(a.cardId);
+      const name = def?.name && def.name.length > 0 ? def.name : a.cardId;
       const cost = def?.cost ?? 0;
       const strength = def?.strength;
       const what = def?.type === 'ally' ? 'Ally' : def?.type === 'item' ? 'Item' : def?.type === 'condition' ? 'Condition' : 'card';
-      return `Play ${a.cardId} (${what}, cost ${cost}${strength !== undefined ? `, strength ${strength}` : ''}).`;
+      return `Play ${name} (${what}, cost ${cost}${strength !== undefined ? `, strength ${strength}` : ''}).`;
     }
-    case 'attackHero':
-      return `Vanquish ${a.heroId} with ${a.allyIds.length} ally/allies.`;
+    case 'attackHero': {
+      const heroDef = getCard(a.heroId);
+      const heroName = heroDef?.name && heroDef.name.length > 0 ? heroDef.name : a.heroId;
+      return `Vanquish ${heroName} with ${a.allyIds.length} ally/allies.`;
+    }
     case 'discardCards':
       return `Discard ${a.cardIds.length} card(s) from hand.`;
     case 'drawToHandSize':
