@@ -82,6 +82,7 @@ export function applyVillainSpecific(
       kind: 'chooseCard',
       message: "Killmonger's Fury — defeat a character of Strength 4 or less in your Domain",
       choices,
+      continuation: { kind: 'deferred', tag: 'defeatCharacter' },
     };
     return s;
   }

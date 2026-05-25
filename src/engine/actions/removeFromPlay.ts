@@ -70,6 +70,10 @@ export function applyRemoveFromPlay(
   if (hit.zone === 'ally') {
     loc.alliesPresent = loc.alliesPresent.filter((c) => c.instanceId !== instanceId);
     p.discard.push(hit.card.cardId);
+    // Cascade: any items attached to this ally are also discarded.
+    const attached = loc.itemsPresent.filter((it) => it.attachedTo === instanceId);
+    loc.itemsPresent = loc.itemsPresent.filter((it) => it.attachedTo !== instanceId);
+    for (const it of attached) p.discard.push(it.cardId);
     s.pendingTriggers.push({
       event: 'allyDefeated',
       player: owner,
@@ -85,8 +89,12 @@ export function applyRemoveFromPlay(
     if (def && (def.type === 'condition' || def.type === 'fateEffect')) s.fateDiscard.push(hit.card.cardId);
     else p.discard.push(hit.card.cardId);
   } else {
-    // hero
+    // hero — handled by defeatHero in the normal Vanquish path; this branch
+    // is the manual escape hatch. Apply the same attach cascade.
     loc.heroesPresent = loc.heroesPresent.filter((c) => c.instanceId !== instanceId);
+    const attachedToHero = loc.itemsPresent.filter((it) => it.attachedTo === instanceId);
+    loc.itemsPresent = loc.itemsPresent.filter((it) => it.attachedTo !== instanceId);
+    for (const it of attachedToHero) p.discard.push(it.cardId);
     s.fateDiscard.push(hit.card.cardId);
     s.pendingTriggers.push({
       event: 'heroDefeated',

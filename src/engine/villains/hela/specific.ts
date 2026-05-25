@@ -86,6 +86,7 @@ export function applyVillainSpecific(
       kind: 'chooseCard',
       message: 'Leah — attach a Soul Mark to a Hero at her location',
       choices: [...choices, { kind: 'skip' }],
+      continuation: { kind: 'deferred', tag: 'soulMarkHero' },
     };
     return s;
   }
@@ -141,6 +142,7 @@ export function applyVillainSpecific(
       kind: 'chooseCard',
       message: 'Raise the Dead — play a Draugr Swordsman from your discard pile',
       choices: draugrInDiscard.map((cardId) => ({ kind: 'card' as const, cardId })),
+      continuation: { kind: 'deferred', tag: 'playFromDiscard' },
     };
     return s;
   }

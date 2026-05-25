@@ -95,6 +95,10 @@ export function applyAttack(
       (a) => a.instanceId !== ally.instance.instanceId,
     );
     owner.discard.push(ally.instance.cardId);
+    // Cascade: any item attached to this ally is also discarded.
+    const attached = loc.itemsPresent.filter((it) => it.attachedTo === ally.instance.instanceId);
+    loc.itemsPresent = loc.itemsPresent.filter((it) => it.attachedTo !== ally.instance.instanceId);
+    for (const it of attached) owner.discard.push(it.cardId);
     s.pendingTriggers.push({
       event: 'allyDefeated',
       player: s.activePlayer,

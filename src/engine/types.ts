@@ -74,10 +74,24 @@ export interface CardDef {
 export interface InPlayCard {
   instanceId: InstanceId;
   cardId: CardId;
-  /** Accumulated strength boosts (turn-scoped and permanent collapsed here). */
+  /**
+   * Effective strength modifier — sum of all +/-1 Strength tokens plus any
+   * "while X" passive bonuses the engine recomputes on demand. Tokens
+   * placed by cards (Taste of Cosmic Power, Overpower, Captain America,
+   * Encephalo-Ray, etc.) increment `tokens.strength` AND `strengthModifier`
+   * in lock-step so removing a token decrements both.
+   */
   strengthModifier: number;
-  /** Tokens placed on this card, keyed by token kind. */
+  /** Tokens placed on this card, keyed by token kind (`strength`, `mark`, etc.). */
   tokens: Record<string, number>;
+  /** True for Heroes that currently carry a Soul Mark (Hela mechanic). */
+  soulMark?: boolean;
+  /**
+   * Instance id of the Ally/Hero this card is attached to (for Items like
+   * Impervious Alloy, Wound, Odin-Force, Deactivation Switch, Photographic
+   * Reflexes). When the target is removed, the attached Item is too.
+   */
+  attachedTo?: InstanceId;
 }
 
 // --- Filters (used by effect primitives) -----------------------------------
@@ -176,7 +190,36 @@ export type PromptContinuation =
       opponent: PlayerId;
       /** The revealed card being placed. */
       cardId: CardId;
+    }
+  | {
+      /**
+       * Generic deferred command — the parked-prompt cards (Proxima snipe,
+       * Black Ant free-play, Diamondback debuff, etc.) tag the action that
+       * should fire when the player picks one of the offered choices. The
+       * resolver looks at `tag` and executes the matching code.
+       */
+      kind: 'deferred';
+      tag: DeferredTag;
+      /** Per-tag data the resolver needs (target villain, source card, etc.). */
+      payload?: Record<string, unknown>;
     };
+
+/** Tags supported by the deferred-action resolver in `cards/effects.ts`. */
+export type DeferredTag =
+  | 'defeatCharacter' // payload.locationsScope: number[] (location indices on active player's realm)
+  | 'discardOwnAlly' // active player picks one of their own Allies to defeat
+  | 'discardFromHand' // pick a card from active player's hand to discard; payload.n?: number for the cycle
+  | 'boostAlly' // payload.n: number — place +n tokens on chosen ally instance
+  | 'debuffHero' // payload.n: number — place -n tokens on chosen hero instance
+  | 'soulMarkHero' // attach a soul mark to chosen hero
+  | 'playFromHandFree' // pick a card from hand to play for free
+  | 'playFromDiscard' // pick a card from discard (type-filtered via payload.type) to play
+  | 'addToHandFromDiscard' // pick a card from discard (type-filtered) to return to hand
+  | 'giveStoneToOpponent' // pick an opponent to receive an unclaimed Stone
+  | 'tasteCosmic' // taste-of-cosmic-power follow-up (boost + free vanquish)
+  | 'attachItem' // pick an Ally/Hero to attach an Item to; payload.itemInstanceId
+  | 'pickEffectFromDiscard' // pick an Effect from discard to return to hand (Warp Reality, Lesson Plan)
+  | 'pickAlly'; // pick one of your Allies (handler reads payload.purpose)
 
 // --- Players & game state --------------------------------------------------
 

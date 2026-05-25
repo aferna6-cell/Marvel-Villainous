@@ -296,6 +296,9 @@ export function applyResolvePrompt(state: GameState, choice: PromptChoice): Game
   if (prompt.continuation?.kind === 'fatePlaceLocation') {
     return resolveFatePlaceLocation(state, prompt.continuation, choice);
   }
+  if (prompt.continuation?.kind === 'deferred') {
+    return resolveDeferred(state, prompt, choice);
+  }
 
   const s = cloneState(state);
   s.log.push({
@@ -304,6 +307,302 @@ export function applyResolvePrompt(state: GameState, choice: PromptChoice): Game
     message: `resolved prompt "${prompt.message}" with ${choice.kind}`,
   });
   s.pendingPrompt = null;
+  return s;
+}
+
+// --- Deferred-action resolver ---------------------------------------------
+
+/** Locate a card instance in any zone of a player's realm. */
+function findInstance(
+  player: PlayerState,
+  instanceId: string,
+):
+  | { card: InPlayCard; loc: number; zone: 'ally' | 'hero' | 'item' | 'condition' }
+  | null {
+  for (let i = 0; i < player.realm.locations.length; i++) {
+    const loc = player.realm.locations[i];
+    if (!loc) continue;
+    for (const c of loc.alliesPresent) if (c.instanceId === instanceId) return { card: c, loc: i, zone: 'ally' };
+    for (const c of loc.heroesPresent) if (c.instanceId === instanceId) return { card: c, loc: i, zone: 'hero' };
+    for (const c of loc.itemsPresent) if (c.instanceId === instanceId) return { card: c, loc: i, zone: 'item' };
+    for (const c of loc.conditions) if (c.instanceId === instanceId) return { card: c, loc: i, zone: 'condition' };
+  }
+  return null;
+}
+
+/** Remove (detach + discard) a single instance from a player's realm. */
+function removeInstance(player: PlayerState, instanceId: string): void {
+  for (const loc of player.realm.locations) {
+    if (!loc) continue;
+    const ally = loc.alliesPresent.find((c) => c.instanceId === instanceId);
+    if (ally) {
+      loc.alliesPresent = loc.alliesPresent.filter((c) => c.instanceId !== instanceId);
+      player.discard.push(ally.cardId);
+      // Cascade: items attached to this ally are also discarded.
+      const attached = loc.itemsPresent.filter((it) => it.attachedTo === instanceId);
+      loc.itemsPresent = loc.itemsPresent.filter((it) => it.attachedTo !== instanceId);
+      for (const it of attached) player.discard.push(it.cardId);
+      return;
+    }
+    const hero = loc.heroesPresent.find((c) => c.instanceId === instanceId);
+    if (hero) {
+      loc.heroesPresent = loc.heroesPresent.filter((c) => c.instanceId !== instanceId);
+      return;
+    }
+    const item = loc.itemsPresent.find((c) => c.instanceId === instanceId);
+    if (item) {
+      loc.itemsPresent = loc.itemsPresent.filter((c) => c.instanceId !== instanceId);
+      player.discard.push(item.cardId);
+      return;
+    }
+  }
+}
+
+function nextInstance(s: GameState): string {
+  return `inst-${++s.instanceCounter}`;
+}
+
+function resolveDeferred(state: GameState, prompt: Prompt, choice: PromptChoice): GameState {
+  if (prompt.continuation?.kind !== 'deferred') {
+    throw new Error('resolveDeferred: prompt has no deferred continuation');
+  }
+  const { tag, payload = {} } = prompt.continuation;
+  const s = cloneState(state);
+  const p = s.players[prompt.player];
+  if (!p) {
+    s.pendingPrompt = null;
+    return s;
+  }
+  const log = (msg: string): void => {
+    s.log.push({ turn: s.turn, player: prompt.player, message: msg });
+  };
+  s.pendingPrompt = null;
+
+  if (choice.kind === 'skip') {
+    log(`skipped: ${prompt.message}`);
+    return s;
+  }
+
+  switch (tag) {
+    case 'defeatCharacter':
+    case 'discardOwnAlly': {
+      if (choice.kind !== 'card') break;
+      const found = findInstance(p, choice.cardId);
+      if (!found) {
+        log(`could not find instance "${choice.cardId}" to defeat`);
+        break;
+      }
+      removeInstance(p, choice.cardId);
+      log(`defeated ${found.card.cardId} at location ${found.loc + 1}`);
+      // If Gamora was the source and the defeated card is a Thanos ally, +2 strength tokens.
+      if (payload['gamoraBoost'] === true) {
+        const def = getCard(found.card.cardId);
+        if (def?.villain === 'thanos') {
+          for (const loc of p.realm.locations) {
+            for (const h of loc.heroesPresent) {
+              if (h.cardId === 'fate-thanos-gamora') {
+                h.strengthModifier += 2;
+                h.tokens['strength'] = (h.tokens['strength'] ?? 0) + 2;
+              }
+            }
+          }
+          log('Gamora — +2 Strength tokens (defeated a Thanos Ally)');
+        }
+      }
+      break;
+    }
+    case 'discardFromHand': {
+      if (choice.kind !== 'card') break;
+      const idx = p.hand.indexOf(choice.cardId);
+      if (idx === -1) {
+        log(`card "${choice.cardId}" not in hand`);
+        break;
+      }
+      p.hand.splice(idx, 1);
+      p.discard.push(choice.cardId);
+      log(`discarded "${choice.cardId}" from hand`);
+      // Multi-discard cycle: re-park if more discards remain.
+      const remaining = Number(payload['remaining'] ?? 1) - 1;
+      if (remaining > 0 && p.hand.length > 0) {
+        s.pendingPrompt = {
+          id: `prompt-${s.turn}-${s.log.length}`,
+          player: prompt.player,
+          kind: 'chooseCard',
+          message: `${prompt.message} (${remaining} more)`,
+          choices: p.hand.map((cardId) => ({ kind: 'card' as const, cardId })),
+          continuation: { kind: 'deferred', tag: 'discardFromHand', payload: { remaining } },
+        };
+      }
+      break;
+    }
+    case 'boostAlly':
+    case 'debuffHero': {
+      if (choice.kind !== 'card') break;
+      const found = findInstance(p, choice.cardId);
+      if (!found) break;
+      const n = Number(payload['n'] ?? 1);
+      const delta = tag === 'debuffHero' ? -n : n;
+      found.card.strengthModifier += delta;
+      found.card.tokens['strength'] = (found.card.tokens['strength'] ?? 0) + delta;
+      log(`placed ${delta >= 0 ? '+' : ''}${delta} Strength token on ${found.card.cardId}`);
+      break;
+    }
+    case 'soulMarkHero': {
+      if (choice.kind !== 'card') break;
+      const found = findInstance(p, choice.cardId);
+      if (!found || found.zone !== 'hero') break;
+      // Heroes with the "no-soul-mark" tag refuse.
+      if (
+        found.card.cardId === 'fate-hela-valkyrior-1' ||
+        found.card.cardId === 'fate-hela-valkyrior-2' ||
+        found.card.cardId === 'fate-hela-valkyrior-3' ||
+        found.card.cardId.startsWith('fate-hela-valkyrior') ||
+        found.card.cardId === 'fate-hela-angela' ||
+        found.card.cardId === 'fate-hela-balder'
+      ) {
+        log(`Soul Marks may not be attached to ${found.card.cardId}`);
+        break;
+      }
+      if (found.card.soulMark) {
+        log(`${found.card.cardId} already has a Soul Mark`);
+        break;
+      }
+      found.card.soulMark = true;
+      found.card.tokens['mark'] = 1;
+      const count = (p.objectiveProgress.steps['asgard'] as number | undefined) ?? 0;
+      p.objectiveProgress.steps['asgard'] = count + 1;
+      log(`Attached Soul Mark to ${found.card.cardId} (${count + 1}/8)`);
+      break;
+    }
+    case 'playFromHandFree': {
+      if (choice.kind !== 'card') break;
+      const idx = p.hand.indexOf(choice.cardId);
+      if (idx === -1) break;
+      const def = getCard(choice.cardId);
+      if (!def) break;
+      p.hand.splice(idx, 1);
+      const instanceId = nextInstance(s);
+      const inst: InPlayCard = {
+        instanceId,
+        cardId: choice.cardId,
+        strengthModifier: 0,
+        tokens: {},
+      };
+      const loc = p.realm.locations[p.realm.villainTokenAt];
+      if (loc) {
+        if (def.type === 'ally') loc.alliesPresent.push(inst);
+        else if (def.type === 'item') loc.itemsPresent.push(inst);
+        else if (def.type === 'effect') p.discard.push(choice.cardId);
+        else loc.conditions.push(inst);
+      }
+      log(`played ${choice.cardId} for free at location ${p.realm.villainTokenAt + 1}`);
+      break;
+    }
+    case 'playFromDiscard': {
+      if (choice.kind !== 'card') break;
+      const idx = p.discard.indexOf(choice.cardId);
+      if (idx === -1) break;
+      const def = getCard(choice.cardId);
+      if (!def) break;
+      p.discard.splice(idx, 1);
+      const instanceId = nextInstance(s);
+      const inst: InPlayCard = {
+        instanceId,
+        cardId: choice.cardId,
+        strengthModifier: 0,
+        tokens: {},
+      };
+      const loc = p.realm.locations[p.realm.villainTokenAt];
+      if (loc) {
+        if (def.type === 'ally') loc.alliesPresent.push(inst);
+        else if (def.type === 'item') loc.itemsPresent.push(inst);
+        else loc.conditions.push(inst);
+      }
+      log(`played ${choice.cardId} from discard at location ${p.realm.villainTokenAt + 1}`);
+      break;
+    }
+    case 'addToHandFromDiscard':
+    case 'pickEffectFromDiscard': {
+      if (choice.kind !== 'card') break;
+      const idx = p.discard.indexOf(choice.cardId);
+      if (idx === -1) break;
+      p.discard.splice(idx, 1);
+      p.hand.push(choice.cardId);
+      log(`returned ${choice.cardId} from discard to hand`);
+      break;
+    }
+    case 'giveStoneToOpponent': {
+      if (choice.kind !== 'target' || choice.target.kind !== 'player') break;
+      const opp = s.players[choice.target.player];
+      if (!opp) break;
+      const stones = (opp.flags['stones'] as string[] | undefined) ?? [];
+      stones.push(`stone-${stones.length + 1}`);
+      opp.flags['stones'] = stones;
+      const count = (opp.objectiveProgress.steps['stones'] as number | undefined) ?? 0;
+      opp.objectiveProgress.steps['stones'] = count + 1;
+      log(`${choice.target.player} received an Infinity Stone (${count + 1}/6)`);
+      break;
+    }
+    case 'tasteCosmic': {
+      if (choice.kind !== 'card') break;
+      const found = findInstance(p, choice.cardId);
+      if (!found || found.zone !== 'ally') break;
+      found.card.strengthModifier += 1;
+      found.card.tokens['strength'] = (found.card.tokens['strength'] ?? 0) + 1;
+      found.card.tokens['tasteCosmicVanquish'] = 1; // signals "may immediately Vanquish without discarding"
+      log(`Taste of Cosmic Power — +1 Strength on ${found.card.cardId}; may Vanquish immediately without discarding.`);
+      break;
+    }
+    case 'attachItem': {
+      if (choice.kind !== 'card') break;
+      const itemInstanceId = String(payload['itemInstanceId'] ?? '');
+      if (!itemInstanceId) break;
+      const item = findInstance(p, itemInstanceId);
+      if (!item || item.zone !== 'item') break;
+      const target = findInstance(p, choice.cardId);
+      if (!target) break;
+      item.card.attachedTo = choice.cardId;
+      // Move the item to the target's location.
+      if (item.loc !== target.loc) {
+        const src = p.realm.locations[item.loc];
+        const dst = p.realm.locations[target.loc];
+        if (src && dst) {
+          src.itemsPresent = src.itemsPresent.filter((it) => it.instanceId !== itemInstanceId);
+          dst.itemsPresent.push(item.card);
+        }
+      }
+      const def = getCard(item.card.cardId);
+      // Apply printed effect of the attach.
+      if (def?.id === 'killmonger-wound') {
+        target.card.strengthModifier -= 2;
+        target.card.tokens['strength'] = (target.card.tokens['strength'] ?? 0) - 2;
+      }
+      if (def?.id?.startsWith('ultron-impervious-alloy')) {
+        target.card.strengthModifier += 2;
+        target.card.tokens['strength'] = (target.card.tokens['strength'] ?? 0) + 2;
+      }
+      if (def?.id === 'fate-hela-odin-force') {
+        if (target.card.soulMark) {
+          target.card.soulMark = false;
+          delete target.card.tokens['mark'];
+        }
+        target.card.tokens['protector'] = 1;
+      }
+      log(`attached ${item.card.cardId} to ${target.card.cardId}`);
+      break;
+    }
+    case 'pickAlly':
+      // Lightweight: just log; meant to be a payload-driven trigger that
+      // downstream handlers can interpret. Most actual ally-pick flows use
+      // the more specific tags above.
+      if (choice.kind === 'card') log(`picked ally ${choice.cardId}`);
+      break;
+    default: {
+      // Exhaustive guard — TS will catch a missing case.
+      const _exh: never = tag;
+      void _exh;
+    }
+  }
   return s;
 }
 

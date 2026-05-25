@@ -7,6 +7,7 @@ import { Hand } from '../ui/components/Hand';
 import { TurnControls } from '../ui/components/TurnControls';
 import { Log } from '../ui/components/Log';
 import { FatePanel } from '../ui/components/FatePanel';
+import { PromptPanel } from '../ui/components/PromptPanel';
 import { WinScreen } from '../ui/components/WinScreen';
 import { PassDeviceCurtain } from '../ui/components/PassDeviceCurtain';
 import { ActionMenu } from '../ui/components/ActionMenu';
@@ -87,6 +88,7 @@ function GameScreen(): JSX.Element {
         <ObjectiveTracker />
         <Hand />
         <FatePanel />
+        <PromptPanel />
         <Log />
         <PassDeviceCurtain />
         <WinScreen />

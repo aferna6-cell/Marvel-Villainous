@@ -14,6 +14,24 @@ interface LocationProps {
 }
 
 /** A single location strip: top row, in-play zones, bottom row covered by heroes. */
+function Tokens({ t }: { t: Record<string, number> }): JSX.Element | null {
+  const entries = Object.entries(t).filter(([k, v]) => v !== 0 && k !== 'mark');
+  if (entries.length === 0) return null;
+  return (
+    <span className="card-mini__tokens">
+      {entries.map(([k, v]) => (
+        <span
+          key={k}
+          className={`card-mini__token card-mini__token--${k}`}
+          title={`${k}: ${v}`}
+        >
+          {k === 'strength' ? (v > 0 ? `+${v}` : `${v}`) : `${k}:${v}`}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 export function Location({ location, index, owner, readOnly = false }: LocationProps): JSX.Element {
   const engine = useEngine();
   const state = useGameState();
@@ -126,6 +144,8 @@ export function Location({ location, index, owner, readOnly = false }: LocationP
             title="right-click to remove from play"
           >
             ⚔ {h.cardId}
+            {h.soulMark ? <span className="card-mini__mark" title="Soul Mark">☥</span> : null}
+            <Tokens t={h.tokens} />
           </span>
         ))}
       </div>
@@ -138,6 +158,7 @@ export function Location({ location, index, owner, readOnly = false }: LocationP
             title="right-click to remove from play"
           >
             ⚒ {a.cardId}
+            <Tokens t={a.tokens} />
           </span>
         ))}
       </div>
@@ -147,9 +168,15 @@ export function Location({ location, index, owner, readOnly = false }: LocationP
             key={it.instanceId}
             className="card-mini card-mini--item"
             onContextMenu={(e) => onRemove(e, it.instanceId)}
-            title="right-click to remove from play"
+            title={
+              it.attachedTo
+                ? `right-click to remove · attached to ${it.attachedTo}`
+                : 'right-click to remove from play'
+            }
           >
             ◆ {it.cardId}
+            {it.attachedTo ? <span className="card-mini__attach" title="attached">⤴</span> : null}
+            <Tokens t={it.tokens} />
           </span>
         ))}
       </div>

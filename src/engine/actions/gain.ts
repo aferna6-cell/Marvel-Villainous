@@ -16,8 +16,20 @@ export function applyGain(state: GameState, player: PlayerId, amount: number): G
   const p = s.players[player];
   if (!p) throw new Error('applyGain: player missing');
 
-  p.power += amount;
-  s.log.push({ turn: s.turn, player, message: `gained ${amount} power` });
-  s.pendingTriggers.push({ event: 'powerGained', player, payload: { amount } });
+  // Passive penalties on power gain from in-play Fate cards.
+  let net = amount;
+  let note = '';
+  if (p.flags['visionPowerPenalty']) {
+    net = Math.max(0, net - 1);
+    note += ' (Vision: -1)';
+  }
+  if (p.flags['invasionStarkActive']) {
+    net = Math.max(0, net - 1);
+    note += ' (Invasion: -1)';
+  }
+
+  p.power += net;
+  s.log.push({ turn: s.turn, player, message: `gained ${net} power${note}` });
+  s.pendingTriggers.push({ event: 'powerGained', player, payload: { amount: net } });
   return s;
 }

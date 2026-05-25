@@ -80,6 +80,7 @@ export function applyVillainSpecific(
       kind: 'chooseCard',
       message: 'Alkhema — defeat a character at her location',
       choices: [...choices, { kind: 'skip' }],
+      continuation: { kind: 'deferred', tag: 'defeatCharacter' },
     };
     return s;
   }

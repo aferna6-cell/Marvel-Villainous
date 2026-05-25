@@ -123,6 +123,7 @@ export function applyVillainSpecific(
       kind: 'chooseCard',
       message: 'Proxima Midnight — defeat a character of Strength 3 or less at her location',
       choices: [...candidates, { kind: 'skip' }],
+      continuation: { kind: 'deferred', tag: 'defeatCharacter' },
     };
     return s;
   }
@@ -146,6 +147,7 @@ export function applyVillainSpecific(
       choices: opponents.map(
         (player): PromptChoice => ({ kind: 'target', target: { kind: 'player', player } }),
       ),
+      continuation: { kind: 'deferred', tag: 'giveStoneToOpponent' },
     };
     return s;
   }
@@ -187,6 +189,7 @@ export function applyVillainSpecific(
       kind: 'chooseCard',
       message: 'Taste of Cosmic Power — place a +1 Strength token on an Ally; that Ally may immediately Vanquish (not discarded).',
       choices: [...allyChoices, { kind: 'skip' }],
+      continuation: { kind: 'deferred', tag: 'tasteCosmic' },
     };
     return s;
   }
@@ -216,6 +219,7 @@ export function applyVillainSpecific(
       kind: 'chooseCard',
       message: 'Warp Reality — choose an Effect from your discard pile to return to your hand',
       choices: [...effectChoices, { kind: 'skip' }],
+      continuation: { kind: 'deferred', tag: 'pickEffectFromDiscard' },
     };
     return s;
   }
@@ -275,6 +279,7 @@ export function applyVillainSpecific(
       kind: 'chooseCard',
       message: "Gamora — defeat a character at her location (if it's a Thanos Ally, +2 Strength tokens on Gamora)",
       choices,
+      continuation: { kind: 'deferred', tag: 'defeatCharacter', payload: { gamoraBoost: true } },
     };
     return s;
   }
@@ -309,6 +314,7 @@ export function applyVillainSpecific(
       choices: opponents.map(
         (player): PromptChoice => ({ kind: 'target', target: { kind: 'player', player } }),
       ),
+      continuation: { kind: 'deferred', tag: 'giveStoneToOpponent' },
     };
     return s;
   }
@@ -325,6 +331,7 @@ export function applyVillainSpecific(
       kind: 'chooseCard',
       message: `What Did It Cost? — discard ${n} card${n === 1 ? '' : 's'} from your hand`,
       choices: p.hand.map((cardId) => ({ kind: 'card' as const, cardId })),
+      continuation: { kind: 'deferred', tag: 'discardFromHand', payload: { remaining: n } },
     };
     return s;
   }

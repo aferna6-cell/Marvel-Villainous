@@ -61,6 +61,7 @@ export function applyVillainSpecific(
         ...allies.map((cardId): PromptChoice => ({ kind: 'card', cardId })),
         { kind: 'skip' },
       ],
+      continuation: { kind: 'deferred', tag: 'playFromHandFree' },
     };
     return s;
   }
@@ -110,6 +111,7 @@ export function applyVillainSpecific(
       choices: loc.heroesPresent.map(
         (h): PromptChoice => ({ kind: 'card', cardId: h.instanceId }),
       ),
+      continuation: { kind: 'deferred', tag: 'debuffHero', payload: { n: 1 } },
     };
     return s;
   }
@@ -161,6 +163,7 @@ export function applyVillainSpecific(
       kind: 'chooseCard',
       message: 'Training Dummy — place a +1 Strength token on an Ally at this location',
       choices: [...allyChoices, { kind: 'skip' }],
+      continuation: { kind: 'deferred', tag: 'boostAlly', payload: { n: 1 } },
     };
     return s;
   }

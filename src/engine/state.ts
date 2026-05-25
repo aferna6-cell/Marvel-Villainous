@@ -46,7 +46,50 @@ export function drainTriggers(state: GameState): GameState {
     const trigger = s.pendingTriggers.shift();
     if (!trigger) break;
     s.log.push({ turn: s.turn, player: trigger.player, message: `trigger: ${trigger.event}` });
-    // CHUNK 5+: dispatch `trigger` to registered card/villain handlers here.
+
+    // --- turnStart: fire any in-play Event-card start-of-turn ticks. --------
+    if (trigger.event === 'turnStart') {
+      const player = s.players[trigger.player];
+      if (!player) continue;
+      // Sacrifices Must Be Made (Thanos Fate): "Before moving, for each
+      // Ally, either pay 1 Power, discard a card, or remove the Ally."
+      // Engine-modelled as: lose min(allyCount, power) Power; log the rest
+      // so the players resolve the partial-pay manually.
+      if (s.globalEvent?.cardId === 'fate-thanos-sacrifices-must-be-made') {
+        let allies = 0;
+        for (const loc of player.realm.locations) allies += loc.alliesPresent.length;
+        const lost = Math.min(allies, player.power);
+        if (lost > 0) {
+          player.power -= lost;
+          s.log.push({
+            turn: s.turn,
+            player: trigger.player,
+            message: `Sacrifices Must Be Made — lost ${lost} Power for ${allies} Ally/Allies (auto-paid; pay-or-remove the remainder manually)`,
+          });
+        }
+      }
+      // Invasion of Stark Enterprises (Ultron Fate): "When gaining Power,
+      // Ultron gains 1 fewer Power" — modelled as a passive flag read by
+      // the gainPower handler; nothing to do at start-of-turn beyond log.
+      if (s.globalEvent?.cardId === 'fate-ultron-invasion-stark') {
+        s.log.push({
+          turn: s.turn,
+          player: trigger.player,
+          message: 'Invasion of Stark Enterprises — Ultron gains 1 fewer Power this turn.',
+        });
+      }
+      // Avengers Assemble: each villain draws a Fate on themselves at the
+      // start of their turn. Auto-revealing here would loop infinitely
+      // because revealing parks a Fate prompt; the engine logs the
+      // reminder and the player triggers it themselves.
+      if (s.globalEvent?.cardId === 'fate-common-avengers-assemble') {
+        s.log.push({
+          turn: s.turn,
+          player: trigger.player,
+          message: 'Avengers Assemble — at start of turn, draw a Fate card and play it on yourself.',
+        });
+      }
+    }
   }
   return s;
 }
