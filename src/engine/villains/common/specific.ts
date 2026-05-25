@@ -43,11 +43,55 @@ export function applyCommonFateSpecific(
     return true;
   }
   if (key === 'fate.common.falcon') {
-    log('Falcon — you may relocate a Hero (Strength ≤3) from any Domain to his location.');
+    // Find Falcon's location, then offer Heroes (Strength ≤3) in any Domain
+    // to relocate to it.
+    let falconLoc = -1;
+    for (let i = 0; i < p.realm.locations.length; i++) {
+      const loc = p.realm.locations[i];
+      if (!loc) continue;
+      if (loc.heroesPresent.some((h) => h.cardId === 'fate-common-falcon')) {
+        falconLoc = i;
+        break;
+      }
+    }
+    if (falconLoc === -1) {
+      log('Falcon — not in play after resolution.');
+      return true;
+    }
+    const choices: import('../../types').PromptChoice[] = [];
+    for (const id of s.playerOrder) {
+      const other = s.players[id];
+      if (!other) continue;
+      for (const loc of other.realm.locations) {
+        for (const h of loc.heroesPresent) {
+          if (h.cardId === 'fate-common-falcon') continue;
+          const def = getCard(h.cardId);
+          if ((def?.strength ?? 99) <= 3) {
+            choices.push({ kind: 'card', cardId: h.instanceId });
+          }
+        }
+      }
+    }
+    if (choices.length === 0) {
+      log('Falcon — no eligible Hero (Strength ≤3) to relocate.');
+      return true;
+    }
+    s.pendingPrompt = {
+      id: `prompt-${s.turn}-${s.log.length}`,
+      player: ctx.player,
+      kind: 'chooseCard',
+      message: 'Falcon — relocate a Hero (Str ≤3) to his location',
+      choices: [...choices, { kind: 'skip' }],
+      continuation: {
+        kind: 'deferred',
+        tag: 'crossRealmCharacter',
+        payload: { purpose: 'relocateHero', toOwner: ctx.player, toLocation: falconLoc },
+      },
+    };
     return true;
   }
   if (key === 'fate.common.hawkeye') {
-    log("Hawkeye — defeat one of the targeted player's Allies at an Event.");
+    log("Hawkeye — defeat one of the targeted player's Allies at an Event (manual: right-click).");
     return true;
   }
   if (key === 'fate.common.sheHulk') {

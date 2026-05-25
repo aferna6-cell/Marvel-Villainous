@@ -66,7 +66,45 @@ export function applyVillainSpecific(
     return s;
   }
   if (key === 'taskmaster.bloodSpider.heroDrag') {
-    log("Blood Spider — when played, you may relocate a Hero from any location to Blood Spider's location.");
+    let bsLoc = -1;
+    for (let i = 0; i < p.realm.locations.length; i++) {
+      const loc = p.realm.locations[i];
+      if (!loc) continue;
+      if (loc.alliesPresent.some((a) => a.cardId === 'taskmaster-blood-spider')) {
+        bsLoc = i;
+        break;
+      }
+    }
+    if (bsLoc === -1) {
+      log('Blood Spider — not in play after resolution.');
+      return s;
+    }
+    const choices: PromptChoice[] = [];
+    for (const id of s.playerOrder) {
+      const other = s.players[id];
+      if (!other) continue;
+      for (const loc of other.realm.locations) {
+        for (const h of loc.heroesPresent) {
+          choices.push({ kind: 'card', cardId: h.instanceId });
+        }
+      }
+    }
+    if (choices.length === 0) {
+      log('Blood Spider — no Hero to relocate.');
+      return s;
+    }
+    s.pendingPrompt = {
+      id: `prompt-${s.turn}-${s.log.length}`,
+      player: ctx.player,
+      kind: 'chooseCard',
+      message: "Blood Spider — relocate a Hero to her location",
+      choices: [...choices, { kind: 'skip' }],
+      continuation: {
+        kind: 'deferred',
+        tag: 'crossRealmCharacter',
+        payload: { purpose: 'relocateHero', toOwner: ctx.player, toLocation: bsLoc },
+      },
+    };
     return s;
   }
   if (key === 'taskmaster.crossbones.playFromDiscard') {
