@@ -19,11 +19,11 @@ export function applyVillainSpecific(
 
   if (applyCommonFateSpecific(s, ctx, key)) return s;
 
-  // Core objective handlers.
+  // ----- objective primitives ---------------------------------------------
   if (key === 'placeSoulMark') {
     const count = (p.objectiveProgress.steps['asgard'] as number | undefined) ?? 0;
     p.objectiveProgress.steps['asgard'] = count + 1;
-    log(`Hela placed a Soul Mark (${count + 1}/8)`);
+    log(`Hela attached a Soul Mark (${count + 1}/8)`);
     return s;
   }
   if (key === 'controlAsgard') {
@@ -37,104 +37,144 @@ export function applyVillainSpecific(
     return s;
   }
 
-  // Per-card handlers.
-  if (key === 'hela.fenris.ignoreFirst') {
-    log('Fenris Wolf — ignores the first Strength of any Hero he attacks (resolve manually).');
+  // ----- Allies -----------------------------------------------------------
+  if (key === 'hela.disir.playFromDiscard') {
+    log('Dísir — may be played from your discard pile (Play action sources from discard, no extra cost).');
     return s;
   }
-  if (key === 'hela.midgardSerpent.coverIcon') {
-    log('Midgard Serpent — covers an icon at this location (use Strict-Icons toggle to enforce).');
-    return s;
-  }
-  if (key === 'hela.deathsEmbrace') {
-    // Park a prompt for the player to pick an ally to defeat for a Soul Mark.
-    const choices: PromptChoice[] = [];
+  if (key === 'hela.draugr.scaleWithDiscard') {
+    const draugrInDiscard = p.discard.filter((id) => id.startsWith('hela-draugr-swordsman-')).length;
     for (const loc of p.realm.locations) {
-      for (const a of loc.alliesPresent) choices.push({ kind: 'card', cardId: a.instanceId });
+      for (const a of loc.alliesPresent) {
+        if (a.cardId.startsWith('hela-draugr-swordsman-')) a.strengthModifier = draugrInDiscard;
+      }
     }
+    log(`Draugr Swordsman — +${draugrInDiscard} Strength (one per Draugr in discard).`);
+    return s;
+  }
+  if (key === 'hela.fenris.heroSummon') {
+    log('Fenris Wolf — when a Hero is played to your Domain, you may play or relocate Fenris there for free.');
+    return s;
+  }
+  if (key === 'hela.leah.mark') {
+    // Find Leah's location, prompt for an unmarked Hero there.
+    let leahLoc = -1;
+    for (let i = 0; i < p.realm.locations.length; i++) {
+      const loc = p.realm.locations[i];
+      if (!loc) continue;
+      if (loc.alliesPresent.some((a) => a.cardId === 'hela-leah')) {
+        leahLoc = i;
+        break;
+      }
+    }
+    if (leahLoc === -1) {
+      log('Leah — not in play after resolution.');
+      return s;
+    }
+    const loc = p.realm.locations[leahLoc];
+    if (!loc) return s;
+    const choices: PromptChoice[] = loc.heroesPresent
+      .filter((h) => !(h as { soulMark?: boolean }).soulMark)
+      .map((h) => ({ kind: 'card' as const, cardId: h.instanceId }));
     if (choices.length === 0) {
-      log("Death's Embrace — no Allies in play; just place a Soul Mark.");
-      const count = (p.objectiveProgress.steps['asgard'] as number | undefined) ?? 0;
-      p.objectiveProgress.steps['asgard'] = count + 1;
+      log('Leah — no Hero at her location to mark.');
       return s;
     }
     s.pendingPrompt = {
       id: `prompt-${s.turn}-${s.log.length}`,
       player: ctx.player,
       kind: 'chooseCard',
-      message: "Death's Embrace — defeat one of your Allies for a Soul Mark",
+      message: 'Leah — attach a Soul Mark to a Hero at her location',
       choices: [...choices, { kind: 'skip' }],
     };
     return s;
   }
-  if (key === 'hela.pricesOfLife') {
-    const total = (p.objectiveProgress.steps['asgard'] as number | undefined) ?? 0;
-    p.power += total;
-    log(`Prices of Life — +${total} Power (1 per Soul Mark)`);
+  if (key === 'hela.midgardSerpent.sweep') {
+    log('Midgard Serpent — may defeat each character of Strength 5 or less at her location in a single Vanquish.');
+    return s;
+  }
+
+  // ----- Effects ----------------------------------------------------------
+  if (key === 'hela.deathsEmbrace') {
+    log("Death's Embrace — relocate a Hero with an attached Soul Mark to Niflheim (use the Move-hero action then advance the Asgard counter).");
+    return s;
+  }
+  if (key === 'hela.helToPay') {
+    log("Hel to Pay — choose a Hero in your Domain with a Soul Mark and Vanquish him (right-click + ObjectiveTracker +).");
+    return s;
+  }
+  if (key === 'hela.priceOfLife') {
+    log("Price of Life — remove a Soul Mark from a Hero in another player's Domain, then gain Power equal to that Hero's Strength.");
     return s;
   }
   if (key === 'hela.soulForASoul') {
-    if (p.discard.length === 0) {
-      log('Soul for a Soul — discard pile empty');
-      return s;
-    }
-    s.pendingPrompt = {
-      id: `prompt-${s.turn}-${s.log.length}`,
-      player: ctx.player,
-      kind: 'chooseCard',
-      message: 'Soul for a Soul — return an Ally from discard to any location',
-      choices: p.discard.map((cardId) => ({ kind: 'card' as const, cardId })),
-    };
+    log("Soul for a Soul — remove a marked Hero from any Domain; if you do, defeat a Hero in Hela's Domain.");
     return s;
   }
+
+  // ----- Items ------------------------------------------------------------
+  if (key === 'hela.nightsword.activate') {
+    log('Nightsword — ACTIVATE: attach a Soul Mark to an unmarked Hero at this location.');
+    return s;
+  }
+
+  // ----- Specialties ------------------------------------------------------
   if (key === 'hela.handOfGlory') {
-    // Discard hand, draw same count. Simplification: park a prompt for how many.
-    log('Hand of Glory — discard any number, then draw the same (resolve via Discard panel + Draw).');
+    log('Hand of Glory — ACTIVATE: choose a Hero in the Fate discard pile, pay Power = their Strength, play them to any Domain, attach a Soul Mark.');
     return s;
   }
   if (key === 'hela.bidding') {
-    log("Hela's Bidding — take an extra action this turn (manual: re-fire the action).");
+    p.flags['biddingActive'] = true;
+    log("Hela's Bidding — passive: gain 3 Power each time another player defeats a marked Hero.");
     return s;
   }
   if (key === 'hela.raiseTheDead') {
-    if (p.discard.length === 0) {
-      log('Raise the Dead — discard pile empty');
+    const draugrInDiscard = p.discard
+      .filter((id) => id.startsWith('hela-draugr-swordsman-'));
+    if (draugrInDiscard.length === 0) {
+      log('Raise the Dead — no Draugr Swordsman in discard.');
       return s;
     }
     s.pendingPrompt = {
       id: `prompt-${s.turn}-${s.log.length}`,
       player: ctx.player,
       kind: 'chooseCard',
-      message: 'Raise the Dead — return an Ally from your discard to your hand',
-      choices: p.discard.map((cardId) => ({ kind: 'card' as const, cardId })),
+      message: 'Raise the Dead — play a Draugr Swordsman from your discard pile',
+      choices: draugrInDiscard.map((cardId) => ({ kind: 'card' as const, cardId })),
     };
     return s;
   }
 
-  // Fate handlers.
-  if (key === 'hela.fate.valkyrior.minStrength') {
-    log('Valkyrior — Vanquish requires 1 Ally of Strength 3+.');
+  // ----- Fate -------------------------------------------------------------
+  if (key === 'hela.fate.valkyrior.noMark') {
+    log('Valkyrior — Soul Marks may not be attached to her.');
     return s;
   }
-  if (key === 'hela.fate.angela.removeMark') {
+  if (key === 'hela.fate.angela') {
     const count = (p.objectiveProgress.steps['asgard'] as number | undefined) ?? 0;
     p.objectiveProgress.steps['asgard'] = Math.max(0, count - 1);
-    log(`Angela arrives — removes one Soul Mark (${Math.max(0, count - 1)}/8).`);
+    log(`Angela arrives — removes a Soul Mark from Odin's Vault (${Math.max(0, count - 1)}/8). Soul Marks cannot be attached to Angela.`);
     return s;
   }
-  if (key === 'hela.fate.balder.blockSpecialty') {
-    p.flags['balderBlocksSpecialty'] = true;
-    log('Balder the Brave — Hela may not play Specialty cards while Balder is in play.');
+  if (key === 'hela.fate.balder') {
+    log('Balder — Soul Marks cannot be attached to him. When played, remove a Soul Mark from any one Hero.');
+    return s;
+  }
+  if (key === 'hela.fate.intervenes') {
+    log("Fate Intervenes — shuffle the targeted player's discard pile into their Villain deck.");
     return s;
   }
   if (key === 'hela.fate.reviveSouls') {
-    const count = (p.objectiveProgress.steps['asgard'] as number | undefined) ?? 0;
-    p.objectiveProgress.steps['asgard'] = Math.max(0, count - 1);
-    log(`Revive Souls — Hela loses a Soul Mark (${Math.max(0, count - 1)}/8).`);
+    log("Revive Souls — choose a Hero in the Fate discard pile; play that Hero to the targeted player's Domain.");
     return s;
   }
-  if (key === 'hela.fate.odinForce.boostHero') {
-    log('The Odin Force — the holding Hero gains +2 Strength (passive).');
+  if (key === 'hela.fate.conquerValhalla') {
+    p.flags['conquerValhallaActive'] = true;
+    log('Conquer Valhalla — Hela may not play, find, or access cards in her discard while in play.');
+    return s;
+  }
+  if (key === 'hela.fate.odinForce') {
+    log('Odin-Force — attach to a Hero: remove any Soul Mark, no Soul Mark may be attached, gains PROTECTOR.');
     return s;
   }
 

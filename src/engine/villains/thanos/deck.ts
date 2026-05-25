@@ -1,18 +1,14 @@
-// THANOS villain deck — 30 cards.
+// THANOS villain deck — 30 cards (authoritative card data from the user's
+// spreadsheet b7b505d2-Marvel_Villainous_Infinite_Power_Decks.xlsx).
 //
-// Composition (per the Thanos wiki page and per-card infoboxes):
-//   10 Allies  — The Legions of Thanos ×5; Black Dwarf ×1; Black Swan ×1;
-//                Corvus Glaive ×1; Ebony Maw ×1; Proxima Midnight ×1
+// Composition: 14 unique cards / 30 total
+//   10 Allies  — Legions of Thanos ×5; Black Dwarf, Black Swan, Corvus
+//                Glaive, Ebony Maw, Proxima Midnight (each ×1)
 //   16 Effects — Consult the Well ×4; A Small Price to Pay ×3; Taste of
 //                Cosmic Power ×3; Deliver Judgment ×2; The Mad Titan ×2;
 //                Warp Reality ×2
 //   4 Items    — Death's Favor ×3; Space Throne ×1
-//
-// Per the project's revised goal (the user explicitly overrode §0), card
-// names + printed ability text are encoded here. Ability text was
-// reconstructed from prior wiki scraping notes and Marvel Villainous
-// rulebook references — minor wording differences from the physical card
-// are possible; the mechanical effect keys are the load-bearing piece.
+// Goal: collect all 6 Infinity Stones.
 
 import type { CardDef } from '../../types';
 
@@ -22,19 +18,17 @@ function copies(prefix: string, n: number, base: Omit<CardDef, 'id'>): CardDef[]
 
 export const thanosDeck: CardDef[] = [
   // ----- 10 Allies ----------------------------------------------------------
-
   ...copies('thanos-legions', 5, {
     villain: 'thanos',
     name: 'The Legions of Thanos',
     type: 'ally',
     cost: 1,
     strength: 2,
-    text: "Thanos's rank-and-file army.",
+    text: 'No additional ability.',
     effects: [],
     tags: ['legions'],
     icons: [],
   }),
-
   {
     id: 'thanos-black-dwarf',
     villain: 'thanos',
@@ -54,7 +48,7 @@ export const thanosDeck: CardDef[] = [
     type: 'ally',
     cost: 2,
     strength: 1,
-    text: 'BLACK SWAN gains +1 Strength for each other Black Order Ally Thanos has in play.',
+    text: "If BLACK SWAN is at the same location as an Infinity Stone, she gains strength equal to the strongest Ally not under your control at her location.",
     effects: [{ op: 'villainSpecific', key: 'thanos.blackSwan.boost', payload: null }],
     tags: ['blackOrder'],
     icons: [],
@@ -66,8 +60,8 @@ export const thanosDeck: CardDef[] = [
     type: 'ally',
     cost: 3,
     strength: 4,
-    text: 'When CORVUS GLAIVE is defeated, return him to your hand instead of the discard pile (once per game).',
-    effects: [{ op: 'villainSpecific', key: 'thanos.corvusGlaive.returnOnDefeat', payload: null }],
+    text: "When CORVUS GLAIVE is relocated to another player's Domain, you may also relocate one THE LEGIONS OF THANOS Ally to his location.",
+    effects: [{ op: 'villainSpecific', key: 'thanos.corvusGlaive.legionsRide', payload: null }],
     tags: ['blackOrder'],
     icons: [],
   },
@@ -78,8 +72,8 @@ export const thanosDeck: CardDef[] = [
     type: 'ally',
     cost: 3,
     strength: 4,
-    text: 'When EBONY MAW is played, draw 1 card.',
-    effects: [{ op: 'drawCards', n: 1 }],
+    text: "If EBONY MAW is part of a vanquish action by Thanos to defeat an opponent's Ally with an attached Infinity Stone, he is not discarded.",
+    effects: [{ op: 'villainSpecific', key: 'thanos.ebonyMaw.persistOnStoneKill', payload: null }],
     tags: ['blackOrder'],
     icons: [],
   },
@@ -90,101 +84,93 @@ export const thanosDeck: CardDef[] = [
     type: 'ally',
     cost: 2,
     strength: 3,
-    text: 'PROXIMA MIDNIGHT cannot be assigned to a location with a Hero.',
-    effects: [{ op: 'villainSpecific', key: 'thanos.proxima.noHeroLocation', payload: null }],
+    text: "When played, defeat a character with strength 3 or less at PROXIMA MIDNIGHT's location.",
+    effects: [{ op: 'villainSpecific', key: 'thanos.proxima.snipe', payload: null }],
     tags: ['blackOrder'],
     icons: [],
   },
 
   // ----- 16 Effects ---------------------------------------------------------
-
   ...copies('thanos-consult', 4, {
     villain: 'thanos',
     name: 'Consult the Well',
     type: 'effect',
     cost: 2,
-    text: 'Take an Infinity Stone from the Infinity Well and place it on a matching location in your Domain.',
+    text: 'Choose another player. That player receives a random unclaimed Infinity Stone. Once played you may relocate an Ally to that location.',
     effects: [{ op: 'villainSpecific', key: 'thanos.consultWell', payload: null }],
     tags: [],
     icons: [],
   }),
-
   ...copies('thanos-small-price', 3, {
     villain: 'thanos',
-    name: 'A Small Price To Pay...',
+    name: 'A Small Price to Pay...',
     type: 'effect',
     cost: 0,
-    text: 'Discard one of your Allies to gain 3 Power.',
+    text: 'Gain 1 Power plus 1 additional Power for each other Villain who controls an Infinity Stone.',
     effects: [{ op: 'villainSpecific', key: 'thanos.smallPrice', payload: null }],
     tags: [],
     icons: [],
   }),
-
   ...copies('thanos-taste-cosmic', 3, {
     villain: 'thanos',
     name: 'Taste of Cosmic Power',
     type: 'effect',
     cost: 2,
-    text: 'Gain 1 Power for each Infinity Stone you have collected.',
+    text: 'Place a +1 strength token on an Ally you control. That Ally may immediately vanquish a character at this location with equal or lesser strength, and is not discarded after this vanquish action.',
     effects: [{ op: 'villainSpecific', key: 'thanos.tasteCosmic', payload: null }],
     tags: [],
     icons: [],
   }),
-
   ...copies('thanos-deliver-judgment', 2, {
     villain: 'thanos',
     name: 'Deliver Judgment',
     type: 'effect',
     cost: 3,
-    text: 'Defeat a Hero of Strength 4 or less.',
-    effects: [{ op: 'defeatHero', whereFilter: {} }],
+    text: 'Choose a location with an Infinity Stone. Relocate up to two Allies you control to that location. Place a +1 Strength token on each of your Allies at that location.',
+    effects: [{ op: 'villainSpecific', key: 'thanos.deliverJudgment', payload: null }],
     tags: [],
     icons: [],
   }),
-
   ...copies('thanos-mad-titan', 2, {
     villain: 'thanos',
     name: 'The Mad Titan',
     type: 'effect',
     cost: 0,
-    text: 'PLAY COST equals the Strength of the target character. Defeat any one character (Ally or Hero) at any location.',
+    text: "Choose a character you do not control in the same location as one of your Allies. Defeat that character. The cost to play THE MAD TITAN is equal to the Strength of the defeated character.",
     effects: [{ op: 'villainSpecific', key: 'thanos.madTitan', payload: null }],
-    tags: [],
+    tags: ['dynamicCost'],
     icons: [],
   }),
-
   ...copies('thanos-warp-reality', 2, {
     villain: 'thanos',
     name: 'Warp Reality',
     type: 'effect',
     cost: 1,
-    text: 'Move any Ally or Item in your Domain to any location.',
-    effects: [{ op: 'moveAlly', from: 'any', to: 'anyLocation' }],
+    text: 'Search your discard pile for an Effect card. Put it in your hand.',
+    effects: [{ op: 'villainSpecific', key: 'thanos.warpReality', payload: null }],
     tags: [],
     icons: [],
   }),
 
   // ----- 4 Items ------------------------------------------------------------
-
   ...copies('thanos-deaths-favor', 3, {
     villain: 'thanos',
     name: "Death's Favor",
     type: 'item',
     cost: 2,
-    text: "While DEATH'S FAVOR is in play at a location, that location gains an additional Vanquish action icon.",
-    effects: [{ op: 'villainSpecific', key: 'thanos.deathsFavor.grantVanquish', payload: null }],
+    text: "You may choose to perform an activate or vanquish action when you move to this location. A location may not hold more than one copy of DEATH'S FAVOR.",
+    effects: [{ op: 'villainSpecific', key: 'thanos.deathsFavor', payload: null }],
     tags: [],
     icons: [],
   }),
-
   {
     id: 'thanos-space-throne',
     villain: 'thanos',
     name: 'Space Throne',
     type: 'item',
     cost: 2,
-    text: 'While SPACE THRONE is in play, the Thanos token gains the "Move an Item or Ally" ability at its location.',
-    effects: [{ op: 'villainSpecific', key: 'thanos.spaceThrone.grantMove', payload: null }],
+    text: 'This location gains RELOCATE.',
+    effects: [{ op: 'villainSpecific', key: 'thanos.spaceThrone', payload: null }],
     tags: [],
     icons: [],
   },

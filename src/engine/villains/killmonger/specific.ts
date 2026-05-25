@@ -20,7 +20,7 @@ export function applyVillainSpecific(
 
   if (applyCommonFateSpecific(s, ctx, key)) return s;
 
-  // Core objective handlers.
+  // ----- objective primitives ---------------------------------------------
   if (key === 'defeatBoss') {
     const count = (p.objectiveProgress.steps['bosses'] as number | undefined) ?? 0;
     p.objectiveProgress.steps['bosses'] = count + 1;
@@ -30,7 +30,7 @@ export function applyVillainSpecific(
   if (key === 'claimWakanda') {
     const count = (p.objectiveProgress.steps['bosses'] as number | undefined) ?? 0;
     if (count < 4) {
-      log(`Wakanda not yet claimed — ${count}/4 bosses defeated`);
+      log(`Wakanda not yet claimed — ${count}/4 objectives complete`);
       return s;
     }
     s.winner = ctx.player;
@@ -38,84 +38,164 @@ export function applyVillainSpecific(
     return s;
   }
 
-  // Card-specific handlers.
-  if (key === 'killmonger.rook.buffLocation') {
-    log('Rook arrives — Allies at this location gain +1 Strength (resolve manually).');
+  // ----- Allies -----------------------------------------------------------
+  if (key === 'killmonger.dogOfWar.foreignDomain') {
+    log("Dog of War — may be played to another player's Domain.");
     return s;
   }
-  if (key === 'killmonger.overpower') {
-    log('Overpower — defeat any Hero. Use the right-click remove + skip the Vanquish discard.');
+  if (key === 'killmonger.king.dragItem') {
+    log('King — when played, you may relocate an unattached Item you control to his location.');
     return s;
   }
-  if (key === 'killmonger.weaponsCache') {
-    log('Weapons Cache — Allies here gain +1 Strength (resolve manually).');
+  if (key === 'killmonger.rook.bodyguard') {
+    p.flags['rookBodyguard'] = true;
+    log("Rook — when another Ally at his location would be defeated, you may remove Rook instead.");
     return s;
   }
-  if (key === 'killmonger.explosives') {
-    // Defeat a Hero of strength 4 or less — park a prompt.
+  if (key === 'killmonger.wkabi.activateDiscount') {
+    p.flags['wkabiDiscount'] = true;
+    log("W'Kabi — Activated Ability Power cost reduced by 1 while he is in play.");
+    return s;
+  }
+
+  // ----- Effects ----------------------------------------------------------
+  if (key === 'killmonger.fury') {
+    // Defeat a character of Strength ≤4 in your Domain — park a prompt.
     const choices: PromptChoice[] = [];
     for (const loc of p.realm.locations) {
+      for (const a of loc.alliesPresent) {
+        const def = getCard(a.cardId);
+        if ((def?.strength ?? 99) <= 4) choices.push({ kind: 'card', cardId: a.instanceId });
+      }
       for (const h of loc.heroesPresent) {
         const def = getCard(h.cardId);
-        if ((def?.strength ?? 0) <= 4) choices.push({ kind: 'card', cardId: h.instanceId });
+        if ((def?.strength ?? 99) <= 4) choices.push({ kind: 'card', cardId: h.instanceId });
       }
     }
     if (choices.length === 0) {
-      log('Explosives — no eligible Hero (Strength 4 or less)');
+      log("Killmonger's Fury — no eligible target (Strength 4 or less).");
       return s;
     }
     s.pendingPrompt = {
       id: `prompt-${s.turn}-${s.log.length}`,
       player: ctx.player,
       kind: 'chooseCard',
-      message: 'Explosives — defeat a Hero of Strength 4 or less',
+      message: "Killmonger's Fury — defeat a character of Strength 4 or less in your Domain",
       choices,
     };
     return s;
   }
-  if (key === 'killmonger.wound') {
-    log('Wound — attach to a Hero (right-click + Strength edits manually).');
+  if (key === 'killmonger.executePlan') {
+    log('Execute Plan — perform an activate action (use an Activate icon at your location).');
     return s;
   }
-  if (key === 'killmonger.armoredRhino') {
-    log('Armored Rhino — placed at the first available location.');
+  if (key === 'killmonger.taunt') {
+    log('Taunt — relocate any character in your Domain to a different location in your Domain.');
+    return s;
+  }
+  if (key === 'killmonger.overpower') {
+    let count = 0;
+    for (const loc of p.realm.locations) {
+      for (const a of loc.alliesPresent) {
+        a.strengthModifier = (a.strengthModifier ?? 0) + 1;
+        count++;
+      }
+    }
+    log(`Overpower — placed +1 Strength token on each of your Allies (${count}).`);
     return s;
   }
 
-  // Fate handlers.
-  if (key === 'killmonger.fate.blackPanther.blockClaim') {
-    p.flags['blackPantherBlocksClaim'] = true;
-    log('Black Panther — Killmonger cannot Claim Wakanda while Black Panther is in his Domain.');
+  // ----- Items ------------------------------------------------------------
+  if (key === 'killmonger.weaponsCache') {
+    log('Weapons Cache — on your turn, you may pay up to 3 Power to reduce target Strength by 1 each until end of turn.');
     return s;
   }
-  if (key === 'killmonger.fate.okoye.boostWithDora') {
-    // Compute: +1 strength to Okoye if a Dora Milaje is also present.
-    for (const loc of p.realm.locations) {
-      const hasDora = loc.heroesPresent.some((h) => h.cardId.startsWith('fate-killmonger-dora-milaje'));
-      for (const h of loc.heroesPresent) {
-        if (h.cardId === 'fate-killmonger-okoye') h.strengthModifier = hasDora ? 1 : 0;
+  if (key === 'killmonger.explosives') {
+    log('Explosives — remove this Item to defeat up to two characters at this location (each Strength 4 or less).');
+    return s;
+  }
+  if (key === 'killmonger.wound') {
+    log('Wound — attach to a character you do not control; they lose 2 Strength.');
+    return s;
+  }
+  if (key === 'killmonger.hackingRig') {
+    // Find the player with the most Power that isn't ctx.player.
+    let maxPower = 0;
+    let maxIs = '';
+    for (const other of s.playerOrder) {
+      const o = s.players[other];
+      if (!o) continue;
+      if (o.power > maxPower) {
+        maxPower = o.power;
+        maxIs = other;
       }
     }
-    log('Okoye — recomputed boost based on Dora Milaje presence.');
+    if (maxIs === ctx.player) {
+      log('Hacking Rig — you have the most Power; cannot activate.');
+      return s;
+    }
+    const gain = Math.ceil(maxPower / 2);
+    p.power += gain;
+    log(`Hacking Rig — ACTIVATE: gained ${gain} Power (half of ${maxPower}, rounded up).`);
     return s;
   }
-  if (key === 'killmonger.fate.shuri.discardItem') {
-    log('Shuri — Killmonger discards 1 Item (resolve manually with right-click).');
+
+  // ----- Specialties ------------------------------------------------------
+  if (key === 'killmonger.armoredRhino') {
+    p.flags['armoredRhinoActive'] = true;
+    log("Armored Rhino — Heroes at Killmonger's location lose 1 Strength.");
+    return s;
+  }
+  if (key === 'killmonger.heartShapedHerb') {
+    log('Heart-Shaped Herb — gain PLAY A CARD. (Cannot be played if Klaw is in your Domain.)');
+    return s;
+  }
+  if (key === 'killmonger.rage') {
+    log("Rage of K'liluna — before moving, you may discard a card to find Killmonger's Fury and add it to your hand.");
+    return s;
+  }
+  if (key === 'killmonger.stolenWisdom') {
+    log('Stolen Wisdom — if you have ≤3 cards in hand at turn end, you may reveal until 2 Items appear and add them to your hand.');
+    return s;
+  }
+
+  // ----- Fate -------------------------------------------------------------
+  if (key === 'fate.protector') {
+    log('PROTECTOR — must be defeated before any other Hero in this Domain can be targeted.');
+    return s;
+  }
+  if (key === 'killmonger.fate.hatutZeraze') {
+    log("Hatut Zeraze — choose an Ally (Strength ≤2) or an Item in the targeted player's Domain; return it to their hand.");
+    return s;
+  }
+  if (key === 'killmonger.fate.blackPanther') {
+    for (const loc of p.realm.locations) {
+      for (const h of loc.heroesPresent) {
+        if (h.cardId === 'fate-killmonger-black-panther') h.strengthModifier = (h.strengthModifier ?? 0) + 2;
+      }
+    }
+    log("Black Panther — +2 Strength while in Killmonger's Domain.");
+    return s;
+  }
+  if (key === 'killmonger.fate.everettRoss') {
+    log("Everett K. Ross — when played, you may remove an Item from the targeted player's Domain.");
+    return s;
+  }
+  if (key === 'killmonger.fate.okoye') {
+    log('Okoye — when played, find DORA MILAJE and play her to the same location as Okoye.');
+    return s;
+  }
+  if (key === 'killmonger.fate.shuri') {
+    log("Shuri — remove an Item from the targeted player's Domain; place +1 Strength tokens equal to its cost on Shuri.");
     return s;
   }
   if (key === 'killmonger.fate.wakandaForever') {
-    for (const loc of p.realm.locations) {
-      for (const h of loc.heroesPresent) {
-        const def = getCard(h.cardId);
-        if (def?.tags?.includes('wakandan')) h.strengthModifier += 1;
-      }
-    }
-    log('Wakanda Forever — Wakandan Heroes gain +1 Strength.');
+    log("Wakanda Forever — find BLACK PANTHER and play/relocate him to Killmonger's Domain; if already in play, +1 Strength token on him.");
     return s;
   }
   if (key === 'killmonger.fate.stolenAntiquities') {
     p.flags['stolenAntiquitiesActive'] = true;
-    log('Stolen Antiquities — Killmonger may not play Specialty cards while in play.');
+    log('Stolen Antiquities — Killmonger cannot play Items while this is in play.');
     return s;
   }
 

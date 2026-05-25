@@ -3,7 +3,7 @@
 import { cloneState } from '../../util';
 import { getCard } from '../../cards/registry';
 import { applyCommonFateSpecific } from '../common/specific';
-import type { EffectContext, GameState } from '../../types';
+import type { EffectContext, GameState, PromptChoice } from '../../types';
 
 export function applyVillainSpecific(
   state: GameState,
@@ -20,7 +20,7 @@ export function applyVillainSpecific(
 
   if (applyCommonFateSpecific(s, ctx, key)) return s;
 
-  // Core objective handlers.
+  // ----- objective primitives ---------------------------------------------
   if (key === 'installUpgrade') {
     const list = (p.flags['upgrades'] as string[] | undefined) ?? [];
     const slot = (payload as { slot?: string } | null | undefined)?.slot;
@@ -37,53 +37,145 @@ export function applyVillainSpecific(
     return s;
   }
 
-  // Card-specific.
-  if (key === 'ultron.flyingSentry.freeRelocate') {
-    log('Flying Sentry — relocate for free (no Move icon required).');
+  // ----- Allies -----------------------------------------------------------
+  if (key === 'ultron.flyingSentry.escape') {
+    log('Flying Sentry — when at an Event when it resolves, you may relocate this Ally to any location in your Domain.');
     return s;
   }
-  if (key === 'ultron.heavyAttack.vanquishBoost') {
-    log('Heavy Attack Sentry — +2 Strength when attacking a Hero (resolve manually in Vanquish).');
+  if (key === 'ultron.heavyAttack.grantVanquish') {
+    p.flags['heavyAttackVanquish'] = true;
+    log('Heavy Attack Sentry — this location gains VANQUISH.');
     return s;
   }
-  if (key === 'ultron.assemblyLine.costReduction') {
-    p.flags['assemblyLineActive'] = true;
-    log('Assembly Line — Allies at this location cost 1 less Power (resolve via −Pow before playCard).');
+  if (key === 'ultron.alkhema.snipe') {
+    let alkLoc = -1;
+    for (let i = 0; i < p.realm.locations.length; i++) {
+      const loc = p.realm.locations[i];
+      if (!loc) continue;
+      if (loc.alliesPresent.some((a) => a.cardId === 'ultron-alkhema')) {
+        alkLoc = i;
+        break;
+      }
+    }
+    if (alkLoc === -1) {
+      log('Alkhema — not in play after resolution.');
+      return s;
+    }
+    const loc = p.realm.locations[alkLoc];
+    if (!loc) return s;
+    const choices: PromptChoice[] = [];
+    for (const a of loc.alliesPresent) {
+      if (a.cardId !== 'ultron-alkhema') choices.push({ kind: 'card', cardId: a.instanceId });
+    }
+    for (const h of loc.heroesPresent) {
+      choices.push({ kind: 'card', cardId: h.instanceId });
+    }
+    if (choices.length === 0) {
+      log('Alkhema — no character at her location to defeat.');
+      return s;
+    }
+    s.pendingPrompt = {
+      id: `prompt-${s.turn}-${s.log.length}`,
+      player: ctx.player,
+      kind: 'chooseCard',
+      message: 'Alkhema — defeat a character at her location',
+      choices: [...choices, { kind: 'skip' }],
+    };
+    return s;
+  }
+  if (key === 'ultron.giantSentry.discardCost') {
+    log('Giant Sentry — may discard two other Sentries from your hand instead of paying the 6 Power cost.');
+    return s;
+  }
+  if (key === 'ultron.jocasta.heroSwap') {
+    log('Jocasta — when played, you may relocate any Hero to any location in any Domain.');
     return s;
   }
 
-  // Fate handlers.
-  if (key === 'ultron.fate.hankPym.removeUpgrade') {
-    const count = (p.objectiveProgress.steps['upgrades'] as number | undefined) ?? 0;
-    p.objectiveProgress.steps['upgrades'] = Math.max(0, count - 1);
-    log(`Hank Pym arrives — Ultron loses 1 Upgrade (${Math.max(0, count - 1)}/4).`);
-    return s;
-  }
-  if (key === 'ultron.fate.scarletWitch.discardItem') {
-    log('Scarlet Witch — Ultron discards 1 Item (resolve manually with right-click).');
-    return s;
-  }
-  if (key === 'ultron.fate.wonderMan.boostPerAvenger') {
-    // Find Wonder Man instances and boost per other Avenger Hero in same realm.
+  // ----- Effects ----------------------------------------------------------
+  if (key === 'ultron.reconfigure') {
+    let locsWithSentry = 0;
     for (const loc of p.realm.locations) {
-      const avengerCount = loc.heroesPresent.filter((h) => {
-        const def = getCard(h.cardId);
-        return def?.tags?.includes('avenger') && h.cardId !== 'fate-ultron-wonder-man';
-      }).length;
+      const hasSentry = loc.alliesPresent.some((a) => {
+        const def = getCard(a.cardId);
+        return def?.tags?.includes('sentry');
+      });
+      if (hasSentry) locsWithSentry++;
+    }
+    p.power += locsWithSentry;
+    log(`Reconfigure — gained ${locsWithSentry} Power (one per location with a Sentry).`);
+    return s;
+  }
+  if (key === 'ultron.assimilateKnowledge') {
+    log('Assimilate Knowledge — look at the top 6 cards of the Fate deck, put them back in any order.');
+    return s;
+  }
+  if (key === 'ultron.encephaloRay') {
+    let count = 0;
+    for (const loc of p.realm.locations) {
       for (const h of loc.heroesPresent) {
-        if (h.cardId === 'fate-ultron-wonder-man') h.strengthModifier = avengerCount;
+        h.strengthModifier = (h.strengthModifier ?? 0) - 1;
+        count++;
       }
     }
-    log("Wonder Man recomputed — +1 per other Avenger in Ultron's Domain.");
+    log(`Encephalo-Ray — placed a -1 Strength token on each Hero in Ultron's Domain (${count} hero${count === 1 ? '' : 'es'}).`);
+    return s;
+  }
+  if (key === 'ultron.everyContingency') {
+    log('Every Contingency Covered — reveal cards from your deck until you reveal an Item or Effect (choose); add it to your hand.');
+    return s;
+  }
+  if (key === 'ultron.technoforming') {
+    log('Technoforming — place a +1 Strength token on an Ally you control; you may relocate that Ally to an Event.');
+    return s;
+  }
+
+  // ----- Items ------------------------------------------------------------
+  if (key === 'ultron.imperviousAlloy') {
+    log('Impervious Alloy — attach to an Ally; only removed when the Ally is defeated or removed.');
+    return s;
+  }
+  if (key === 'ultron.assemblyLine') {
+    log('Assembly Line — ACTIVATE: reveal cards from your deck until you reveal an Ally, add it to your hand, gain 1 Power.');
+    return s;
+  }
+
+  // ----- Fate -------------------------------------------------------------
+  if (key === 'ultron.fate.hankPym') {
+    p.flags['hankPymBlocksDiscard'] = true;
+    log("Hank Pym — Ultron may not play or find cards from his discard pile while Hank Pym is in his Domain.");
+    return s;
+  }
+  if (key === 'ultron.fate.mockingbird') {
+    const lost = Math.min(p.power, 2);
+    p.power -= lost;
+    log(`Mockingbird — Ultron loses ${lost} Power.`);
+    return s;
+  }
+  if (key === 'ultron.fate.scarletWitch') {
+    log('Scarlet Witch — choose a card type; the targeted player reveals their hand and discards all cards of that type.');
+    return s;
+  }
+  if (key === 'ultron.fate.wasp') {
+    log("Wasp — you may relocate any Hero from the targeted player's Domain to a new location in any player's Domain.");
+    return s;
+  }
+  if (key === 'ultron.fate.wonderMan') {
+    log("Wonder Man — when defeated, find VISION and play or relocate him to Wonder Man's previous location.");
+    return s;
+  }
+  if (key === 'ultron.fate.molecularRearranger') {
+    log("Molecular Rearranger — choose an Item or Ally in the targeted player's Domain; they must remove all copies of that card from their Domain.");
     return s;
   }
   if (key === 'ultron.fate.deactivationSwitch') {
     p.flags['deactivationSwitchActive'] = true;
-    log('Deactivation Switch — Ultron may not use the Activate icon at this location.');
+    log('Deactivation Switch — attach to a Specialty; it may not be used until the player pays 2 Power to remove it.');
     return s;
   }
-  if (key === 'ultron.fate.invasionStark.startOfTurn') {
-    log('Invasion of Stark Industries — Ultron loses 1 Power at the start of each turn (passive).');
+  if (key === 'ultron.fate.invasionStark') {
+    p.flags['invasionStarkActive'] = true;
+    log('Invasion of Stark Enterprises — Ultron gains 1 fewer Power when gaining Power. Reward: gain 6 Power.');
     return s;
   }
 

@@ -1,8 +1,9 @@
 // Taskmaster `villainSpecific` keys.
 
 import { cloneState } from '../../util';
+import { getCard } from '../../cards/registry';
 import { applyCommonFateSpecific } from '../common/specific';
-import type { EffectContext, GameState } from '../../types';
+import type { EffectContext, GameState, PromptChoice } from '../../types';
 
 export function applyVillainSpecific(
   state: GameState,
@@ -19,11 +20,11 @@ export function applyVillainSpecific(
 
   if (applyCommonFateSpecific(s, ctx, key)) return s;
 
-  // Core objective handler.
+  // ----- objective primitives ---------------------------------------------
   if (key === 'completeContract') {
     const list = (p.flags['contracts'] as string[] | undefined) ?? [];
     const id = (payload as { contractId?: string } | null | undefined)?.contractId;
-    if (id) list.push(id); // duplicates allowed — multiple exercises stack
+    if (id) list.push(id);
     p.flags['contracts'] = list;
     const count = (p.objectiveProgress.steps['contracts'] as number | undefined) ?? 0;
     p.objectiveProgress.steps['contracts'] = count + 1;
@@ -31,58 +32,212 @@ export function applyVillainSpecific(
     return s;
   }
 
-  // Card-specific.
-  if (key === 'taskmaster.blackAnt.peek') {
-    log("Black Ant — peek at an opponent's hand (resolve via opponent showing their hand).");
+  // ----- Allies -----------------------------------------------------------
+  if (key === 'taskmaster.trainees.absorb') {
+    p.flags['traineesAbsorb'] = true;
+    log("Trainees — instead of discarding an Ally used in Vanquish at this location, remove the Trainees instead.");
     return s;
   }
-  if (key === 'taskmaster.redeploy') {
-    log("Redeploy — move all your Allies into one location (use Relocate action repeatedly).");
+  if (key === 'taskmaster.anaconda.spreadBoost') {
+    log('Anaconda — when used in a Vanquish, place +1 Strength tokens on each remaining Ally at her previous location.');
     return s;
   }
-  if (key === 'taskmaster.revealContract') {
-    log('Trainer for Hire — reveal a new Contract (handled by the player flipping the contract pile).');
+  if (key === 'taskmaster.blackAnt.freePlay') {
+    if (p.hand.length === 0) {
+      log('Black Ant — no Allies in hand for a free play.');
+      return s;
+    }
+    const allies = p.hand.filter((id) => getCard(id)?.type === 'ally');
+    if (allies.length === 0) {
+      log('Black Ant — no Allies in hand for a free play.');
+      return s;
+    }
+    s.pendingPrompt = {
+      id: `prompt-${s.turn}-${s.log.length}`,
+      player: ctx.player,
+      kind: 'chooseCard',
+      message: 'Black Ant — choose another Ally to play from your hand for free',
+      choices: [
+        ...allies.map((cardId): PromptChoice => ({ kind: 'card', cardId })),
+        { kind: 'skip' },
+      ],
+    };
     return s;
   }
-  if (key === 'taskmaster.trainingAcademy') {
-    log('Training Academy — Allies at this location gain +1 Strength (resolve manually).');
+  if (key === 'taskmaster.bloodSpider.heroDrag') {
+    log("Blood Spider — when played, you may relocate a Hero from any location to Blood Spider's location.");
     return s;
   }
-  if (key === 'taskmaster.trainingDummy') {
-    log('Training Dummy — acts as a target Ally for Vanquish exercises.');
+  if (key === 'taskmaster.crossbones.playFromDiscard') {
+    log('Crossbones — may be played from your discard pile.');
     return s;
   }
-  if (key === 'taskmaster.shield.protect') {
-    log("Taskmaster's Shield — attached Ally cannot be defeated by Strength 2 or less.");
+  if (key === 'taskmaster.deathShield.scaleWithHeroes') {
+    for (const loc of p.realm.locations) {
+      const heroCount = loc.heroesPresent.length;
+      for (const a of loc.alliesPresent) {
+        if (a.cardId === 'taskmaster-death-shield') a.strengthModifier = heroCount;
+      }
+    }
+    log('Death Shield — +1 Strength per Hero at his location.');
     return s;
   }
-  if (key === 'taskmaster.lessonPlan') {
-    log('Lesson Plan — peek at the next Contract and accept or pass.');
+  if (key === 'taskmaster.diamondback.heroDebuff') {
+    let dbLoc = -1;
+    for (let i = 0; i < p.realm.locations.length; i++) {
+      const loc = p.realm.locations[i];
+      if (!loc) continue;
+      if (loc.alliesPresent.some((a) => a.cardId === 'taskmaster-diamondback')) {
+        dbLoc = i;
+        break;
+      }
+    }
+    if (dbLoc === -1) {
+      log('Diamondback — not in play after resolution.');
+      return s;
+    }
+    const loc = p.realm.locations[dbLoc];
+    if (!loc) return s;
+    if (loc.heroesPresent.length === 0) {
+      log('Diamondback — no Hero at her location.');
+      return s;
+    }
+    s.pendingPrompt = {
+      id: `prompt-${s.turn}-${s.log.length}`,
+      player: ctx.player,
+      kind: 'chooseCard',
+      message: 'Diamondback — place a -1 Strength token on a Hero at her location',
+      choices: loc.heroesPresent.map(
+        (h): PromptChoice => ({ kind: 'card', cardId: h.instanceId }),
+      ),
+    };
     return s;
   }
-  if (key === 'taskmaster.photographicReflexes') {
-    log('Photographic Reflexes — copy a defeated Hero\'s ability (manual resolution).');
+  if (key === 'taskmaster.jaggedBow.eventBonus') {
+    log('Jagged Bow — after relocating/playing to an Event, you may relocate/play a second Ally to the same Event for free.');
     return s;
   }
 
-  // Fate handlers.
-  if (key === 'taskmaster.fate.butterball.invulnerable') {
-    log('Butterball — cannot be Vanquished; must be moved away.');
+  // ----- Effects ----------------------------------------------------------
+  if (key === 'taskmaster.conductExercise') {
+    log('Conduct Exercise — perform an activate action (use an Activate icon at your location).');
     return s;
   }
-  if (key === 'taskmaster.fate.solo.discardItem') {
-    log('Solo — Taskmaster discards 1 Item (resolve manually with right-click).');
+  if (key === 'taskmaster.redeploy') {
+    log('Redeploy — relocate up to three Allies you control (use Relocate action ×3).');
+    return s;
+  }
+  if (key === 'taskmaster.shadowInitiative') {
+    log("Shadow Initiative — relocate an Ally you control to another player's Domain; place a +1 Strength token on that Ally.");
+    return s;
+  }
+  if (key === 'taskmaster.trainerForHire') {
+    log("Trainer for Hire — choose another player; reveal cards from their Villain deck until you reveal an Ally; play it free in their Domain; gain Power = its cost +1.");
+    return s;
+  }
+
+  // ----- Items ------------------------------------------------------------
+  if (key === 'taskmaster.trainingAcademy') {
+    p.flags['trainingAcademyActive'] = true;
+    log('Training Academy — when a character is Vanquished at this location, place +1 tokens on each Ally here and discard this Item instead of the Allies.');
+    return s;
+  }
+  if (key === 'taskmaster.trainingDummy') {
+    const allyChoices: PromptChoice[] = [];
+    for (const loc of p.realm.locations) {
+      const hasDummy = loc.itemsPresent.some((it) => it.cardId.startsWith('taskmaster-training-dummy-'));
+      if (!hasDummy) continue;
+      for (const a of loc.alliesPresent) {
+        allyChoices.push({ kind: 'card', cardId: a.instanceId });
+      }
+    }
+    if (allyChoices.length === 0) {
+      log('Training Dummy — ACTIVATE: no Ally at this location to boost.');
+      return s;
+    }
+    s.pendingPrompt = {
+      id: `prompt-${s.turn}-${s.log.length}`,
+      player: ctx.player,
+      kind: 'chooseCard',
+      message: 'Training Dummy — place a +1 Strength token on an Ally at this location',
+      choices: [...allyChoices, { kind: 'skip' }],
+    };
+    return s;
+  }
+  if (key === 'taskmaster.bow.grantVanquish') {
+    p.flags['bowVanquish'] = true;
+    log("Taskmaster's Bow — this location gains VANQUISH.");
+    return s;
+  }
+  if (key === 'taskmaster.shield.bodyguard') {
+    log("Taskmaster's Shield — when an Ally at this location would be defeated or removed, you may remove the Shield instead.");
+    return s;
+  }
+  if (key === 'taskmaster.sword.locationBuff') {
+    // All of Taskmaster's Allies at the Sword's location gain +1 Strength.
+    for (const loc of p.realm.locations) {
+      const hasSword = loc.itemsPresent.some((it) => it.cardId === 'taskmaster-sword');
+      if (!hasSword) continue;
+      for (const a of loc.alliesPresent) {
+        a.strengthModifier = (a.strengthModifier ?? 0) + 1;
+      }
+    }
+    log("Taskmaster's Sword — all your Allies at this location gain +1 Strength.");
+    return s;
+  }
+
+  // ----- Specialties ------------------------------------------------------
+  if (key === 'taskmaster.lessonPlan') {
+    log('Lesson Plan — ACTIVATE: pay 1 Power, find an Item or Effect in your discard pile or deck and add to hand.');
+    return s;
+  }
+  if (key === 'taskmaster.photographicReflexes') {
+    log('Photographic Reflexes — when another player plays an Effect, you may pay 1 Power to attach that Effect; ACTIVATE later to play it.');
+    return s;
+  }
+
+  // ----- Fate -------------------------------------------------------------
+  if (key === 'taskmaster.fate.spiderClone.summonOthers') {
+    log('Scarlet Spider Clone — find the other two clones and play them to this location.');
+    return s;
+  }
+  if (key === 'taskmaster.fate.butterball') {
+    p.flags['butterballInPlay'] = true;
+    log('Butterball — cannot be defeated; before moving, pay 3 Power + discard 1 card to remove him.');
+    return s;
+  }
+  if (key === 'taskmaster.fate.scottLang') {
+    let scottLoc = -1;
+    for (let i = 0; i < p.realm.locations.length; i++) {
+      const loc = p.realm.locations[i];
+      if (!loc) continue;
+      if (loc.heroesPresent.some((h) => h.cardId === 'fate-taskmaster-scott-lang')) {
+        scottLoc = i;
+        break;
+      }
+    }
+    if (scottLoc !== -1) {
+      const loc = p.realm.locations[scottLoc];
+      if (loc) {
+        for (const a of loc.alliesPresent) {
+          a.strengthModifier = (a.strengthModifier ?? 0) - 1;
+        }
+        log(`Scott Lang — all Allies at his location lose 1 Strength (${loc.alliesPresent.length} affected).`);
+      }
+    }
+    return s;
+  }
+  if (key === 'taskmaster.fate.solo') {
+    log('Solo — if he is the only Hero in a Domain, he gains 2 Strength.');
     return s;
   }
   if (key === 'taskmaster.fate.foundByAvengers') {
-    const count = (p.objectiveProgress.steps['contracts'] as number | undefined) ?? 0;
-    p.objectiveProgress.steps['contracts'] = Math.max(0, count - 1);
-    log(`Found by the Avengers — Taskmaster loses 1 completed Contract (${Math.max(0, count - 1)}/4).`);
+    log('Found by the Avengers — choose an Ally of the targeted Villain and any Hero in any Domain; remove both.');
     return s;
   }
   if (key === 'taskmaster.fate.governmentWork') {
     p.flags['governmentWorkActive'] = true;
-    log('Government Work — Contracts cost 1 extra Power while in play.');
+    log('Government Work — Taskmaster cannot relocate Allies or Items except to this Event.');
     return s;
   }
 
