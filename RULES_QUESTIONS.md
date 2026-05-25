@@ -13,17 +13,10 @@ placeholders are marked `PLACEHOLDER` in the source.
 The user has explicitly overridden the original §0 ground rule
 ("no card names, text, or art in repo — mechanical metadata only").
 Card names and ability text are now encoded in
-`src/engine/villains/*/deck.ts` and `*/fateDeck.ts`.
-
-**Sources & confidence:** the rulebook + Marvel Villainous Wiki were
-the original sources for the mechanical numbers (cost, strength,
-copies). Card names came from those infoboxes. Ability text was
-**reconstructed** — the live wiki was Cloudflare-blocked in this
-environment so the printed text on each card could not be re-scraped
-directly. The mechanical `effects[]` arrays are the load-bearing
-piece (the engine runs from those, not the prose); the `text` field
-is the player-facing description and should be **spot-checked against
-your physical cards** before relying on its exact wording.
+`src/engine/villains/*/deck.ts` and `*/fateDeck.ts`, sourced from the
+user's own spreadsheet (`Marvel_Villainous_Infinite_Power_Decks.xlsx`)
+of their physical game's card data — **authoritative** rather than
+reconstructed.
 
 **Per-card `villainSpecific` keys** dispatch to the matching handler
 in `src/engine/villains/<v>/specific.ts`; the Common Fate Avenger
@@ -31,6 +24,36 @@ abilities live in `src/engine/villains/common/specific.ts`. If you
 spot a wording or mechanical mismatch with your physical card, edit
 the `text` and `effects[]` fields directly and the engine picks it up
 on next reload — no infra change required.
+
+## Engine state model — what's first-class now
+
+- `InPlayCard.soulMark?: boolean` — Hela's Soul Mark mechanic.
+  Tokens-of-strength on a Hero are tracked separately in
+  `tokens.strength`. Heroes with the "no-Soul-Mark" flag (Valkyrior,
+  Angela, Balder) are refused by the resolver.
+- `InPlayCard.attachedTo?: InstanceId` — Items attached to specific
+  Ally/Hero instances (Impervious Alloy, Wound, Odin-Force,
+  Deactivation Switch, Photographic Reflexes). Attached items
+  cascade-discard with their target via Vanquish, `defeatHero`, and
+  manual `removeFromPlay`.
+- `PromptContinuation.deferred` — generic tagged continuation that
+  lets a parked prompt say *what action* should fire when the player
+  picks a choice (`defeatCharacter`, `boostAlly`, `debuffHero`,
+  `soulMarkHero`, `playFromHandFree`, `playFromDiscard`,
+  `addToHandFromDiscard`, `pickEffectFromDiscard`,
+  `giveStoneToOpponent`, `tasteCosmic`, `discardFromHand` with cycle,
+  `attachItem`).
+- `applyGain` reads the `visionPowerPenalty` / `invasionStarkActive`
+  flags and reduces the gain by 1 each (floored at 0).
+- `defeatHero` is special-cased for Hulk (relocate instead of
+  discarding, +1 Strength token) and Wonder Man (find Vision in the
+  shared Fate deck/discard and play him at the previous location).
+  Hela's Bidding fires here when a marked Hero is defeated.
+- `attack.applyAttack` runs the Trainees / Taskmaster's Shield / Rook
+  bodyguard substitutions before the regular spent-ally discard.
+- `drainTriggers` fires start-of-turn hooks for in-play global
+  Events (Sacrifices Must Be Made auto-pays, Invasion of Stark
+  Enterprises + Avengers Assemble log the reminder).
 
 ## Open questions (raised in CHUNK 3)
 

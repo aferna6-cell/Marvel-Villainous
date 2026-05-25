@@ -449,13 +449,19 @@ function resolveDeferred(state: GameState, prompt: Prompt, choice: PromptChoice)
     }
     case 'soulMarkHero': {
       if (choice.kind !== 'card') break;
-      const found = findInstance(p, choice.cardId);
-      if (!found || found.zone !== 'hero') break;
-      // Heroes with the "no-soul-mark" tag refuse.
+      // Search every player's realm — Marked by Death targets any Domain.
+      let found: { card: InPlayCard; loc: number } | null = null;
+      for (const id of s.playerOrder) {
+        const other = s.players[id];
+        if (!other) continue;
+        const f = findInstance(other, choice.cardId);
+        if (f && f.zone === 'hero') {
+          found = { card: f.card, loc: f.loc };
+          break;
+        }
+      }
+      if (!found) break;
       if (
-        found.card.cardId === 'fate-hela-valkyrior-1' ||
-        found.card.cardId === 'fate-hela-valkyrior-2' ||
-        found.card.cardId === 'fate-hela-valkyrior-3' ||
         found.card.cardId.startsWith('fate-hela-valkyrior') ||
         found.card.cardId === 'fate-hela-angela' ||
         found.card.cardId === 'fate-hela-balder'
@@ -469,6 +475,7 @@ function resolveDeferred(state: GameState, prompt: Prompt, choice: PromptChoice)
       }
       found.card.soulMark = true;
       found.card.tokens['mark'] = 1;
+      // Counter advances for the Marking villain (the prompt's player).
       const count = (p.objectiveProgress.steps['asgard'] as number | undefined) ?? 0;
       p.objectiveProgress.steps['asgard'] = count + 1;
       log(`Attached Soul Mark to ${found.card.cardId} (${count + 1}/8)`);

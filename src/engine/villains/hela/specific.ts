@@ -21,9 +21,36 @@ export function applyVillainSpecific(
 
   // ----- objective primitives ---------------------------------------------
   if (key === 'placeSoulMark') {
-    const count = (p.objectiveProgress.steps['asgard'] as number | undefined) ?? 0;
-    p.objectiveProgress.steps['asgard'] = count + 1;
-    log(`Hela attached a Soul Mark (${count + 1}/8)`);
+    // Marked by Death: choose a Hero in ANY Domain without a Soul Mark.
+    // Gather eligible heroes across every seated player.
+    const choices: PromptChoice[] = [];
+    for (const playerId of s.playerOrder) {
+      const player = s.players[playerId];
+      if (!player) continue;
+      for (const loc of player.realm.locations) {
+        for (const h of loc.heroesPresent) {
+          if (h.soulMark) continue;
+          if (
+            h.cardId.startsWith('fate-hela-valkyrior') ||
+            h.cardId === 'fate-hela-angela' ||
+            h.cardId === 'fate-hela-balder'
+          ) continue;
+          choices.push({ kind: 'card', cardId: h.instanceId });
+        }
+      }
+    }
+    if (choices.length === 0) {
+      log('Marked by Death — no unmarked Hero in any Domain.');
+      return s;
+    }
+    s.pendingPrompt = {
+      id: `prompt-${s.turn}-${s.log.length}`,
+      player: ctx.player,
+      kind: 'chooseCard',
+      message: 'Marked by Death — attach a Soul Mark to a Hero in any Domain',
+      choices: [...choices, { kind: 'skip' }],
+      continuation: { kind: 'deferred', tag: 'soulMarkHero' },
+    };
     return s;
   }
   if (key === 'controlAsgard') {

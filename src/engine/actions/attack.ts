@@ -90,7 +90,62 @@ export function applyAttack(
   const loc = owner.realm.locations[hero.location];
   if (!loc) throw new Error('applyAttack: location missing');
 
+  // Bodyguard substitution: if Trainees / Taskmaster's Shield / Rook is at
+  // this location and the spent ally is somebody else, the bodyguard absorbs
+  // the discard.
+  const trainees = loc.alliesPresent.find((a) => a.cardId.startsWith('taskmaster-trainees'));
+  const shield = loc.itemsPresent.find((it) => it.cardId === 'taskmaster-shield');
+  const rook = loc.alliesPresent.find((a) => a.cardId === 'killmonger-rook');
+  let traineesUsed = false;
+  let shieldUsed = false;
+  let rookUsed = false;
+
   for (const ally of allies) {
+    // Trainees can swallow the discard for any OTHER ally used in this
+    // Vanquish (they can't save themselves per the printed text).
+    if (
+      trainees &&
+      !traineesUsed &&
+      ally.instance.instanceId !== trainees.instanceId &&
+      !ally.instance.cardId.startsWith('taskmaster-trainees')
+    ) {
+      loc.alliesPresent = loc.alliesPresent.filter((a) => a.instanceId !== trainees.instanceId);
+      owner.discard.push(trainees.cardId);
+      traineesUsed = true;
+      s.log.push({
+        turn: s.turn,
+        player: s.activePlayer,
+        message: `Trainees absorbed the discard for ${ally.instance.cardId}`,
+      });
+      continue;
+    }
+    if (shield && !shieldUsed) {
+      loc.itemsPresent = loc.itemsPresent.filter((it) => it.instanceId !== shield.instanceId);
+      owner.discard.push(shield.cardId);
+      shieldUsed = true;
+      s.log.push({
+        turn: s.turn,
+        player: s.activePlayer,
+        message: `Taskmaster's Shield absorbed the discard for ${ally.instance.cardId}`,
+      });
+      continue;
+    }
+    if (
+      rook &&
+      !rookUsed &&
+      ally.instance.instanceId !== rook.instanceId &&
+      ally.instance.cardId !== 'killmonger-rook'
+    ) {
+      loc.alliesPresent = loc.alliesPresent.filter((a) => a.instanceId !== rook.instanceId);
+      owner.discard.push(rook.cardId);
+      rookUsed = true;
+      s.log.push({
+        turn: s.turn,
+        player: s.activePlayer,
+        message: `Rook absorbed the discard for ${ally.instance.cardId}`,
+      });
+      continue;
+    }
     loc.alliesPresent = loc.alliesPresent.filter(
       (a) => a.instanceId !== ally.instance.instanceId,
     );

@@ -59,7 +59,40 @@ describe('Thanos: placeStone / snap', () => {
 });
 
 describe('Hela: placeSoulMark / controlAsgard', () => {
-  it('placeSoulMark bumps the asgard counter', () => {
+  it('placeSoulMark parks a soulMarkHero prompt; resolving it bumps the counter and marks the Hero', () => {
+    const game = makeGame({
+      phase: 'actions',
+      activePlayer: 'p2',
+      players: {
+        p1: makePlayer('p1', 'thanos'),
+        p2: makePlayer('p2', 'hela'),
+        p3: makePlayer('p3', 'ultron'),
+        p4: makePlayer('p4', 'killmonger'),
+      },
+    });
+    // Put an unmarked Hero in p1's Domain so placeSoulMark has a target.
+    game.players.p1.realm.locations[0].heroesPresent = [
+      { instanceId: 'inst-h', cardId: 'h-eligible', strengthModifier: 0, tokens: {} },
+    ];
+    const parked = applyEffect(
+      game,
+      { op: 'villainSpecific', key: 'placeSoulMark', payload: null },
+      { player: 'p2' },
+    );
+    expect(parked.pendingPrompt).not.toBeNull();
+    expect(parked.pendingPrompt!.continuation?.kind).toBe('deferred');
+
+    // Resolve — picks the only eligible hero. Soul mark attached, counter +1.
+    const next = reduce(parked, {
+      kind: 'resolvePrompt',
+      choice: { kind: 'card', cardId: 'inst-h' },
+    });
+    const hero = next.players.p1.realm.locations[0]!.heroesPresent[0];
+    expect(hero?.soulMark).toBe(true);
+    expect(next.players.p2.objectiveProgress.steps['asgard']).toBe(1);
+  });
+
+  it('placeSoulMark with no eligible Hero in any Domain is a no-op', () => {
     const game = makeGame({
       phase: 'actions',
       activePlayer: 'p2',
@@ -75,7 +108,8 @@ describe('Hela: placeSoulMark / controlAsgard', () => {
       { op: 'villainSpecific', key: 'placeSoulMark', payload: null },
       { player: 'p2' },
     );
-    expect(next.players.p2.objectiveProgress.steps['asgard']).toBe(1);
+    expect(next.pendingPrompt).toBeNull();
+    expect(next.players.p2.objectiveProgress.steps['asgard']).toBeUndefined();
   });
 
   it('controlAsgard sets winner when asgard >= 8', () => {
