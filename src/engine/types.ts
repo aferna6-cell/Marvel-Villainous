@@ -237,6 +237,8 @@ export type DeferredTag =
   | 'attachItem' // pick an Ally/Hero to attach an Item to; payload.itemInstanceId
   | 'pickEffectFromDiscard' // pick an Effect from discard to return to hand (Warp Reality, Lesson Plan)
   | 'activateItem' // pick an in-play Item/Specialty to fire its activateEffects[]
+  | 'madTitanDefeat' // pick a character to defeat; charge Power equal to their Strength
+  | 'crossRealmCharacter' // pick a character in any specified player's realm (payload: ownerId)
   | 'pickAlly'; // pick one of your Allies (handler reads payload.purpose)
 
 // --- Players & game state --------------------------------------------------

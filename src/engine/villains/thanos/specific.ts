@@ -198,7 +198,41 @@ export function applyVillainSpecific(
     return s;
   }
   if (key === 'thanos.madTitan') {
-    log("The Mad Titan — pay Power equal to the defeated character's Strength; right-click the target to defeat it, then −Pow.");
+    // Collect eligible targets: any character (Ally or Hero) at a location
+    // where Thanos has at least one Ally, excluding Thanos's own Allies.
+    const choices: PromptChoice[] = [];
+    for (let i = 0; i < p.realm.locations.length; i++) {
+      const loc = p.realm.locations[i];
+      if (!loc) continue;
+      const thanosHasAlly = loc.alliesPresent.some((a) => {
+        const def = getCard(a.cardId);
+        return def?.villain === 'thanos';
+      });
+      if (!thanosHasAlly) continue;
+      // Targets are any character at this location not controlled by Thanos.
+      for (const h of loc.heroesPresent) {
+        choices.push({ kind: 'card', cardId: h.instanceId });
+      }
+      for (const a of loc.alliesPresent) {
+        const def = getCard(a.cardId);
+        if (def?.villain !== 'thanos') {
+          choices.push({ kind: 'card', cardId: a.instanceId });
+        }
+      }
+    }
+    if (choices.length === 0) {
+      log('The Mad Titan — no eligible target (need an opposing character at one of your Ally locations).');
+      // Refund the card to hand since the play fizzles with no target.
+      return s;
+    }
+    s.pendingPrompt = {
+      id: `prompt-${s.turn}-${s.log.length}`,
+      player: ctx.player,
+      kind: 'chooseCard',
+      message: "The Mad Titan — pick a character to defeat (cost = their Strength)",
+      choices: [...choices, { kind: 'skip' }],
+      continuation: { kind: 'deferred', tag: 'madTitanDefeat' },
+    };
     return s;
   }
   if (key === 'thanos.warpReality') {

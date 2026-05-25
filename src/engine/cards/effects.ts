@@ -22,6 +22,7 @@ import type {
   EffectSpec,
   GameState,
   InPlayCard,
+  PlayerId,
   PlayerState,
   Prompt,
   PromptChoice,
@@ -604,6 +605,111 @@ function resolveDeferred(state: GameState, prompt: Prompt, choice: PromptChoice)
         target.card.tokens['protector'] = 1;
       }
       log(`attached ${item.card.cardId} to ${target.card.cardId}`);
+      break;
+    }
+    case 'madTitanDefeat': {
+      if (choice.kind !== 'card') break;
+      // Search every player's realm — Mad Titan targets characters not under
+      // Thanos's control at locations where Thanos has an Ally.
+      let found: { card: InPlayCard; loc: number; ownerId: PlayerId; zone: 'ally' | 'hero' } | null = null;
+      for (const id of s.playerOrder) {
+        const other = s.players[id];
+        if (!other) continue;
+        const f = findInstance(other, choice.cardId);
+        if (f && (f.zone === 'ally' || f.zone === 'hero')) {
+          found = { card: f.card, loc: f.loc, ownerId: id, zone: f.zone };
+          break;
+        }
+      }
+      if (!found) {
+        log(`Mad Titan — target ${choice.cardId} not found`);
+        break;
+      }
+      const def = getCard(found.card.cardId);
+      const cost = (def?.strength ?? 0) + (found.card.strengthModifier ?? 0);
+      if (p.power < cost) {
+        log(`Mad Titan — insufficient Power (${p.power}/${cost}); play fizzles`);
+        break;
+      }
+      p.power -= cost;
+      // Defeat the character.
+      const owner = s.players[found.ownerId];
+      if (!owner) break;
+      removeInstance(owner, found.card.instanceId);
+      if (found.zone === 'hero') {
+        s.fateDiscard.push(found.card.cardId);
+        const ownerIdx = owner.discard.lastIndexOf(found.card.cardId);
+        if (ownerIdx !== -1) owner.discard.splice(ownerIdx, 1);
+      }
+      log(`Mad Titan — paid ${cost} Power, defeated ${found.card.cardId} in ${found.ownerId}'s Domain`);
+      break;
+    }
+    case 'crossRealmCharacter': {
+      if (choice.kind !== 'card') break;
+      const purpose = String(payload['purpose'] ?? 'defeat');
+      let found: { card: InPlayCard; loc: number; ownerId: PlayerId; zone: 'ally' | 'hero' | 'item' | 'condition' } | null = null;
+      for (const id of s.playerOrder) {
+        const other = s.players[id];
+        if (!other) continue;
+        const f = findInstance(other, choice.cardId);
+        if (f) { found = { card: f.card, loc: f.loc, ownerId: id, zone: f.zone }; break; }
+      }
+      if (!found) break;
+      const target = s.players[found.ownerId];
+      if (!target) break;
+      switch (purpose) {
+        case 'returnToHand': {
+          // Hatut Zeraze: return chosen Ally or Item to owner's hand.
+          removeInstance(target, found.card.instanceId);
+          // removeInstance pushed it to discard; pop and place in hand instead.
+          const pile = target.discard;
+          const idx = pile.lastIndexOf(found.card.cardId);
+          if (idx !== -1) pile.splice(idx, 1);
+          target.hand.push(found.card.cardId);
+          log(`returned ${found.card.cardId} to ${found.ownerId}'s hand`);
+          break;
+        }
+        case 'removeItem': {
+          // Everett K. Ross / Shuri: remove an Item from opponent's Domain.
+          removeInstance(target, found.card.instanceId);
+          // If the source was Shuri, add +1 Strength tokens equal to the Item's cost.
+          if (payload['boostShuriOnRemove'] === true) {
+            const def = getCard(found.card.cardId);
+            const cost = def?.cost ?? 0;
+            for (const loc of p.realm.locations) {
+              for (const h of loc.heroesPresent) {
+                if (h.cardId === 'fate-killmonger-shuri') {
+                  h.tokens['strength'] = (h.tokens['strength'] ?? 0) + cost;
+                  h.strengthModifier = (h.strengthModifier ?? 0) + cost;
+                }
+              }
+            }
+            log(`Shuri — +${cost} Strength tokens (cost of removed Item)`);
+          }
+          log(`removed ${found.card.cardId} from ${found.ownerId}'s Domain`);
+          break;
+        }
+        case 'relocateHero': {
+          if (found.zone !== 'hero') break;
+          const dstLocStr = payload['toLocation'];
+          const dstOwnerStr = payload['toOwner'];
+          // If destination is unspecified, leave for follow-up; for now,
+          // park a chooseLocation prompt against the destination owner.
+          if (typeof dstLocStr === 'number' && typeof dstOwnerStr === 'string') {
+            const dstOwner = s.players[dstOwnerStr as PlayerId];
+            if (!dstOwner) break;
+            const srcLoc = target.realm.locations[found.loc];
+            if (!srcLoc) break;
+            srcLoc.heroesPresent = srcLoc.heroesPresent.filter((h) => h.instanceId !== found!.card.instanceId);
+            const dstLoc = dstOwner.realm.locations[dstLocStr];
+            if (dstLoc) dstLoc.heroesPresent.push(found.card);
+            log(`relocated ${found.card.cardId} → ${dstOwnerStr} loc ${dstLocStr + 1}`);
+          }
+          break;
+        }
+        default:
+          log(`crossRealmCharacter: purpose "${purpose}" not implemented`);
+      }
       break;
     }
     case 'activateItem': {

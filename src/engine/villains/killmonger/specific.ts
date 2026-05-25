@@ -199,7 +199,37 @@ export function applyVillainSpecific(
     return s;
   }
   if (key === 'killmonger.fate.hatutZeraze') {
-    log("Hatut Zeraze — choose an Ally (Strength ≤2) or an Item in the targeted player's Domain; return it to their hand.");
+    // Cross-realm prompt: choose an Ally (Strength ≤2) or any Item in the
+    // targeted Fated-on player's Domain; return it to their hand.
+    // The "targeted player" is each opponent; for simplicity we let the
+    // player choose among ALL opposing Allies (Strength ≤2) and Items.
+    const choices: PromptChoice[] = [];
+    for (const id of s.playerOrder) {
+      if (id === ctx.player) continue;
+      const other = s.players[id];
+      if (!other) continue;
+      for (const loc of other.realm.locations) {
+        for (const a of loc.alliesPresent) {
+          const def = getCard(a.cardId);
+          if ((def?.strength ?? 99) <= 2) choices.push({ kind: 'card', cardId: a.instanceId });
+        }
+        for (const it of loc.itemsPresent) {
+          choices.push({ kind: 'card', cardId: it.instanceId });
+        }
+      }
+    }
+    if (choices.length === 0) {
+      log('Hatut Zeraze — no eligible target.');
+      return s;
+    }
+    s.pendingPrompt = {
+      id: `prompt-${s.turn}-${s.log.length}`,
+      player: ctx.player,
+      kind: 'chooseCard',
+      message: "Hatut Zeraze — return an Ally (Str ≤2) or Item to its owner's hand",
+      choices: [...choices, { kind: 'skip' }],
+      continuation: { kind: 'deferred', tag: 'crossRealmCharacter', payload: { purpose: 'returnToHand' } },
+    };
     return s;
   }
   if (key === 'killmonger.fate.blackPanther') {
@@ -212,7 +242,29 @@ export function applyVillainSpecific(
     return s;
   }
   if (key === 'killmonger.fate.everettRoss') {
-    log("Everett K. Ross — when played, you may remove an Item from the targeted player's Domain.");
+    const choices: PromptChoice[] = [];
+    for (const id of s.playerOrder) {
+      if (id === ctx.player) continue;
+      const other = s.players[id];
+      if (!other) continue;
+      for (const loc of other.realm.locations) {
+        for (const it of loc.itemsPresent) {
+          choices.push({ kind: 'card', cardId: it.instanceId });
+        }
+      }
+    }
+    if (choices.length === 0) {
+      log('Everett K. Ross — no opposing Items in play.');
+      return s;
+    }
+    s.pendingPrompt = {
+      id: `prompt-${s.turn}-${s.log.length}`,
+      player: ctx.player,
+      kind: 'chooseCard',
+      message: "Everett K. Ross — remove an Item from an opposing Domain",
+      choices: [...choices, { kind: 'skip' }],
+      continuation: { kind: 'deferred', tag: 'crossRealmCharacter', payload: { purpose: 'removeItem' } },
+    };
     return s;
   }
   if (key === 'killmonger.fate.okoye') {
@@ -220,7 +272,29 @@ export function applyVillainSpecific(
     return s;
   }
   if (key === 'killmonger.fate.shuri') {
-    log("Shuri — remove an Item from the targeted player's Domain; place +1 Strength tokens equal to its cost on Shuri.");
+    const choices: PromptChoice[] = [];
+    for (const id of s.playerOrder) {
+      if (id === ctx.player) continue;
+      const other = s.players[id];
+      if (!other) continue;
+      for (const loc of other.realm.locations) {
+        for (const it of loc.itemsPresent) {
+          choices.push({ kind: 'card', cardId: it.instanceId });
+        }
+      }
+    }
+    if (choices.length === 0) {
+      log('Shuri — no opposing Items in play.');
+      return s;
+    }
+    s.pendingPrompt = {
+      id: `prompt-${s.turn}-${s.log.length}`,
+      player: ctx.player,
+      kind: 'chooseCard',
+      message: "Shuri — remove an opposing Item; +1 Str tokens on Shuri equal to its cost",
+      choices: [...choices, { kind: 'skip' }],
+      continuation: { kind: 'deferred', tag: 'crossRealmCharacter', payload: { purpose: 'removeItem', boostShuriOnRemove: true } },
+    };
     return s;
   }
   if (key === 'killmonger.fate.wakandaForever') {
