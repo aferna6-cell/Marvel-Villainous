@@ -990,6 +990,99 @@ function resolveDeferred(state: GameState, prompt: Prompt, choice: PromptChoice)
       // No choice needed; the handler ran on play and called this to mass-summon.
       break;
     }
+    case 'fenrisWolfSummon': {
+      if (choice.kind !== 'confirm') break;
+      const dstLoc = Number(payload['location'] ?? -1);
+      if (dstLoc < 0) break;
+      // Find Fenris Wolf in hand or discard.
+      let source: 'hand' | 'discard' | 'play' | null = null;
+      let srcLocIdx = -1;
+      const handIdx = p.hand.indexOf('hela-fenris-wolf');
+      const discIdx = p.discard.indexOf('hela-fenris-wolf');
+      if (handIdx !== -1) source = 'hand';
+      else if (discIdx !== -1) source = 'discard';
+      else {
+        // already in play — relocate to the dst location.
+        for (let i = 0; i < p.realm.locations.length; i++) {
+          const loc = p.realm.locations[i];
+          if (!loc) continue;
+          if (loc.alliesPresent.some((a) => a.cardId === 'hela-fenris-wolf')) {
+            source = 'play';
+            srcLocIdx = i;
+            break;
+          }
+        }
+      }
+      if (!source) break;
+      const dst = p.realm.locations[dstLoc];
+      if (!dst) break;
+      if (source === 'hand') p.hand.splice(handIdx, 1);
+      else if (source === 'discard') p.discard.splice(discIdx, 1);
+      if (source === 'play') {
+        const src = p.realm.locations[srcLocIdx];
+        if (src) {
+          const moved = src.alliesPresent.find((a) => a.cardId === 'hela-fenris-wolf');
+          if (moved) {
+            src.alliesPresent = src.alliesPresent.filter((a) => a.cardId !== 'hela-fenris-wolf');
+            dst.alliesPresent.push(moved);
+          }
+        }
+      } else {
+        dst.alliesPresent.push({
+          instanceId: `inst-${++s.instanceCounter}`,
+          cardId: 'hela-fenris-wolf',
+          strengthModifier: 0,
+          tokens: {},
+        });
+      }
+      log(`Fenris Wolf — auto-summoned to loc ${dstLoc + 1} (from ${source})`);
+      break;
+    }
+    case 'photographicReflexesAttach': {
+      if (choice.kind !== 'confirm') break;
+      const effectCardId = String(payload['effectCardId'] ?? '');
+      const prInstance = String(payload['prInstance'] ?? '');
+      const originalPlayer = String(payload['originalPlayer'] ?? '');
+      if (!effectCardId || !prInstance) break;
+      if (p.power < 1) {
+        log('Photographic Reflexes — not enough Power to attach.');
+        break;
+      }
+      // Find PR instance and stash the effect on tokens.attachedEffect via a
+      // synthetic field. Engine convention: tokens are number-valued only,
+      // so we use the player flag `prAttached` to store the cardId pair.
+      p.power -= 1;
+      const attached = (p.flags['prAttached'] as Array<{ effectCardId: string; originalPlayer: string }>) ?? [];
+      attached.push({ effectCardId, originalPlayer });
+      p.flags['prAttached'] = attached;
+      // Mark the PR instance with a count token.
+      const found = findInstance(p, prInstance);
+      if (found) {
+        found.card.tokens['attachedEffects'] = (found.card.tokens['attachedEffects'] ?? 0) + 1;
+      }
+      log(`Photographic Reflexes — paid 1 Power, attached ${effectCardId} (originally ${originalPlayer}'s)`);
+      break;
+    }
+    case 'jaggedBowExtra': {
+      if (choice.kind !== 'card') break;
+      // Free play of a chosen Ally from hand to any location.
+      const cardId = choice.cardId;
+      const idx = p.hand.indexOf(cardId);
+      if (idx === -1) break;
+      const def = getCard(cardId);
+      if (!def || def.type !== 'ally') break;
+      p.hand.splice(idx, 1);
+      const dest = p.realm.locations[p.realm.villainTokenAt];
+      if (!dest) break;
+      dest.alliesPresent.push({
+        instanceId: `inst-${++s.instanceCounter}`,
+        cardId,
+        strengthModifier: 0,
+        tokens: {},
+      });
+      log(`Jagged Bow free-play — ${cardId} placed (no Power spent)`);
+      break;
+    }
     case 'foundByAvengersStep2': {
       // First step: remove the picked Ally.
       if (choice.kind !== 'card') break;
@@ -1387,5 +1480,12 @@ function resolveFatePlaceLocation(
     player: state.activePlayer,
     message: `placed ${continuation.cardId} on ${continuation.opponent} loc ${choice.location + 1}`,
   });
+  if (def?.type === 'hero') {
+    s.pendingTriggers.push({
+      event: 'heroArrived',
+      player: continuation.opponent,
+      payload: { cardId: continuation.cardId, location: choice.location, instanceId: inPlay.instanceId },
+    });
+  }
   return s;
 }

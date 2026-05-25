@@ -254,6 +254,9 @@ export type DeferredTag =
   | 'trainerForHire' // pick an opponent; engine reveals from their deck until an Ally + plays free + gain cost+1
   | 'spiderCloneSummon' // helper used to auto-bring the other clones (no choice)
   | 'foundByAvengersStep2' // step 2: after picking the Ally, pick a Hero to also remove
+  | 'fenrisWolfSummon' // optional: play/relocate Fenris Wolf for free to a hero-arrival location
+  | 'photographicReflexesAttach' // optional: pay 1 to attach an opponent's Effect to PR
+  | 'jaggedBowExtra' // optional: play/relocate a second Ally to the Event for free
   | 'pickAlly'; // pick one of your Allies (handler reads payload.purpose)
 
 // --- Players & game state --------------------------------------------------
@@ -365,6 +368,7 @@ export type TriggerEvent =
   | 'cardPlayed'
   | 'powerGained'
   | 'heroDefeated'
+  | 'heroArrived'
   | 'allyDefeated'
   | 'conditionTick';
 

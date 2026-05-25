@@ -150,6 +150,23 @@ export function applyAttack(
       (a) => a.instanceId !== ally.instance.instanceId,
     );
     owner.discard.push(ally.instance.cardId);
+    // Anaconda — when she is spent in a Vanquish, +1 Strength token on every
+    // remaining ally the active player controls at her previous location.
+    if (ally.instance.cardId === 'taskmaster-anaconda') {
+      let count = 0;
+      for (const remaining of loc.alliesPresent) {
+        remaining.tokens['strength'] = (remaining.tokens['strength'] ?? 0) + 1;
+        remaining.strengthModifier = (remaining.strengthModifier ?? 0) + 1;
+        count++;
+      }
+      if (count > 0) {
+        s.log.push({
+          turn: s.turn,
+          player: s.activePlayer,
+          message: `Anaconda — placed +1 Strength token on ${count} remaining Ally/Allies`,
+        });
+      }
+    }
     // Cascade: any item attached to this ally is also discarded.
     const attached = loc.itemsPresent.filter((it) => it.attachedTo === ally.instance.instanceId);
     loc.itemsPresent = loc.itemsPresent.filter((it) => it.attachedTo !== ally.instance.instanceId);

@@ -85,8 +85,27 @@ export function applyPlayCard(
   s.pendingTriggers.push({
     event: 'cardPlayed',
     player: s.activePlayer,
-    payload: { cardId, type: def.type },
+    payload: { cardId, type: def.type, location: placeAt },
   });
+
+  // Jagged Bow — autofires when Jagged Bow is played while a Global Event is
+  // in play: park an optional free-Ally play prompt for the active player.
+  if (cardId === 'taskmaster-jagged-bow' && s.globalEvent !== null) {
+    const allyChoices = player.hand
+      .map((id) => ({ id, def: getCard(id) }))
+      .filter((x) => x.def?.type === 'ally')
+      .map((x) => ({ kind: 'card' as const, cardId: x.id }));
+    if (allyChoices.length > 0) {
+      s.pendingPrompt = {
+        id: `prompt-${s.turn}-${s.log.length}`,
+        player: s.activePlayer,
+        kind: 'chooseCard',
+        message: 'Jagged Bow — play a second Ally to the Event for free',
+        choices: [...allyChoices, { kind: 'skip' }],
+        continuation: { kind: 'deferred', tag: 'jaggedBowExtra' },
+      };
+    }
+  }
 
   s = applyEffects(s, def.effects, {
     player: s.activePlayer,

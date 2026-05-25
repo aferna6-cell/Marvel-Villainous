@@ -90,6 +90,78 @@ export function drainTriggers(state: GameState): GameState {
         });
       }
     }
+
+    // --- heroArrived: reactive Fenris Wolf summon (Hela). ------------------
+    if (trigger.event === 'heroArrived') {
+      const owner = s.players[trigger.player];
+      if (!owner) continue;
+      if (owner.villain === 'hela') {
+        const hasFenris =
+          owner.hand.some((c) => c === 'hela-fenris-wolf') ||
+          owner.discard.some((c) => c === 'hela-fenris-wolf');
+        if (hasFenris) {
+          const heroLoc = (trigger.payload as { location?: number } | null | undefined)?.location ?? 0;
+          s.pendingPrompt = {
+            id: `prompt-${s.turn}-${s.log.length}`,
+            player: trigger.player,
+            kind: 'optional',
+            message: 'Fenris Wolf — a Hero arrived; play/relocate Fenris to that location for free?',
+            choices: [
+              { kind: 'confirm' },
+              { kind: 'skip' },
+            ],
+            continuation: {
+              kind: 'deferred',
+              tag: 'fenrisWolfSummon',
+              payload: { location: heroLoc },
+            },
+          };
+          break;
+        }
+      }
+    }
+
+    // --- cardPlayed: reactive Photographic Reflexes attach (Taskmaster). ---
+    if (trigger.event === 'cardPlayed') {
+      const payload = trigger.payload as { cardId?: string; type?: string } | null | undefined;
+      if (payload?.type === 'effect') {
+        for (const id of s.playerOrder) {
+          if (id === trigger.player) continue;
+          const owner = s.players[id];
+          if (!owner) continue;
+          if (owner.villain !== 'taskmaster') continue;
+          let prInstance: string | null = null;
+          for (const loc of owner.realm.locations) {
+            for (const a of loc.alliesPresent) {
+              if (a.cardId === 'taskmaster-photographic-reflexes') {
+                prInstance = a.instanceId;
+                break;
+              }
+            }
+            if (prInstance) break;
+          }
+          if (!prInstance) continue;
+          if (owner.power < 1) continue;
+          s.pendingPrompt = {
+            id: `prompt-${s.turn}-${s.log.length}`,
+            player: id,
+            kind: 'optional',
+            message: `Photographic Reflexes — pay 1 Power to attach ${payload.cardId} to Photographic Reflexes?`,
+            choices: [
+              { kind: 'confirm' },
+              { kind: 'skip' },
+            ],
+            continuation: {
+              kind: 'deferred',
+              tag: 'photographicReflexesAttach',
+              payload: { effectCardId: payload.cardId ?? '', prInstance, originalPlayer: trigger.player },
+            },
+          };
+          break;
+        }
+        if (s.pendingPrompt) break;
+      }
+    }
   }
   return s;
 }
